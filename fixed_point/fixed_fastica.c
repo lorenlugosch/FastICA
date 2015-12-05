@@ -190,7 +190,7 @@ void normalize() {
 	for (i = 0; i < N; i++) {
 		w_next_Q21_43[i] = multiply_Q11_21_by_Q11_21(w_rnorm, w_next_Q11_21[i]);
 		w_next_Q6_10[i] = (Q6_10)(w_next_Q21_43[i] >> 33);
-		printf("w_next: %f\n",((float)w_next_Q6_10[i]) / 1024);
+		printf("w_next: %d\n",w_next_Q6_10[i]);
 	}
 }
 
@@ -212,5 +212,5 @@ void fastica() {
 int main() {
 	/* find unmixing vector */ 
 	fastica();
-	printf("The unmixing vector is : [%f %f]\n",((float)w_Q6_10[0])/1024,((float)w_Q6_10[1])/1024);
+	printf("The unmixing vector is : [%d %d]\n",w_Q6_10[0],w_Q6_10[1]);
 }
