@@ -185,5 +185,5 @@ int main() {
 
 	/* find unmixing vector */ 
 	fastica();
-	printf("The unmixing vector is : [%f %f]\n",DBL2HEX(w[0]),DBL2HEX(w[1]));//DBL2HEX(w[0]),DBL2HEX(w[1]));
+	printf("The unmixing vector is : [%u %u]\n",DBL2HEX(w[0]),DBL2HEX(w[1]));//DBL2HEX(w[0]),DBL2HEX(w[1]));
 }
