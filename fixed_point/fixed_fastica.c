@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "fixed_fastica.h"
 
+/*
 float Q6_10_to_float(Q6_10 input) {
 	return ((float)input) / 1024;
 }
@@ -40,7 +41,7 @@ Q21_43 multiply_Q11_21_by_Q11_21(Q11_21 a, Q11_21 b) {
 	Q21_43 cc = (Q21_43)a * (Q21_43)b * 2;
 
 	return cc;
-}
+}*/
 
 /* reciprocal square root (newton-raphson method) */
 Q11_21 rsqrt(Q21_43 input) {
