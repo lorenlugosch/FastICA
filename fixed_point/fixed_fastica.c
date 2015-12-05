@@ -1,4 +1,3 @@
-//#include <omp.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
@@ -27,7 +26,7 @@ Q11_21 float_to_Q11_21(float input) {
 
 Q21_43 float_to_Q21_43(float input) {
 	return (Q11_21)(input*8796093022208);
-}
+}*/
 
 Q11_21 multiply_Q6_10_by_Q6_10(Q6_10 a, Q6_10 b) {
 	//if ((a == b) && (a == -65536)) { return 65535; }
@@ -41,27 +40,10 @@ Q21_43 multiply_Q11_21_by_Q11_21(Q11_21 a, Q11_21 b) {
 	Q21_43 cc = (Q21_43)a * (Q21_43)b * 2;
 
 	return cc;
-}*/
+}
 
-/* reciprocal square root (newton-raphson method) */
+/* reciprocal square root (piecewise linear approximation) */
 Q11_21 rsqrt(Q21_43 input) {
-	// int i;
-	//Q21_43 output = 4398046511104; // initial guess = 0.5
-	/*//(newton-raphson method)
-	// Q21_43 a;
-	// Q21_43 b;
-	// Q21_43 c;
-	// Q21_43 d;
-
-	// for (i = 0; i < 5; i++) {
-	// 	a = multiply_Q11_21_by_Q11_21(input >> 22,output >> 22);
-	// 	b = multiply_Q11_21_by_Q11_21(a >> 22,output >> 22);
-	// 	c = b >> 1;
-	// 	d = 13194139533312 - c;
-	// 	output = multiply_Q11_21_by_Q11_21(output >> 22,d >> 22);
-	// }*/
-
-
 	Q11_21 a;
 	Q21_43 b;
 
@@ -76,14 +58,8 @@ Q11_21 rsqrt(Q21_43 input) {
 	// input won't fit into Q11.21- scale input and make "a" bigger to compensate
 	else if ((input >= 4398046511104000) && (input < 8796093022208000))		{input = input >> 3; a = -426; b = 493460818545;}
 	else if ((input >= 8796093022208000)) 	{input = input >> 3; a = -150; b = 349204892981;}
-	// else if (input >= 1759218604441600) 								{input = input >> 3; a = -53; b = 247170213924;}
 
-	//printf("reciprocal square root of %f is %f\n", ((float)input)/8796093022208, ((float)((Q11_21)((multiply_Q11_21_by_Q11_21((Q11_21)(input >> 22),a) + b) >> 22)))/2097152 );
 	return (Q11_21)((multiply_Q11_21_by_Q11_21((Q11_21)(input >> 22),a) + b) >> 22);
-	// float x = sqrtf(((float)input)/8796093022208);
-	// output = (Q11_21)((1/x)*2097152);
-	// printf("reciprocal square root of %f is %f\n", ((float)input)/8796093022208, 1/x);
-	//return output;
 }
 
 void update_w() {
@@ -163,7 +139,6 @@ int converged() {
 	for (i = 0; i < N; i++) {
 		dot_product += multiply_Q6_10_by_Q6_10(w_Q6_10[i], w_next_Q6_10[i]);
 	}
-	//printf("dot_product: %f\n",((float)dot_product)/2097152);
 
 	if (fabs(fabs(dot_product)-2097152) < EPSILON) { return 1; }
 	else { return 0; }
@@ -212,7 +187,6 @@ Makes rotation vector into unit vector.
 void normalize() {
 	int i;
 	Q11_21 w_rnorm = rnorm();
-	//printf("w_rnorm: %f\n", ((float)w_rnorm)/2097152);
 	for (i = 0; i < N; i++) {
 		w_next_Q21_43[i] = multiply_Q11_21_by_Q11_21(w_rnorm, w_next_Q11_21[i]);
 		w_next_Q6_10[i] = (Q6_10)(w_next_Q21_43[i] >> 33);
@@ -225,14 +199,6 @@ Main computation.
 Finds one of the vectors of the unmixing matrix.
 */
 void fastica() {
-	// w_Q6_10[0] = float_to_Q6_10(0.5);
-	// w_Q6_10[1] = float_to_Q6_10(0.5);
-	// w_next_Q6_10[0] = float_to_Q6_10(0.6);
-	// w_next_Q6_10[1] = float_to_Q6_10(0.7);
-	// rotate();
-	// normalize();
-	// while(1);
-
 	/* rotate, normalize, and repeat */
 	while(!converged()) {
 		//printf("iteration %d : w = [%f %f], w_next = [%f %f]\n",iteration,((float)w_Q6_10[0])/1024,((float)w_Q6_10[1])/1024,((float)w_next_Q6_10[0])/1024,((float)w_next_Q6_10[1])/1024);
@@ -244,9 +210,6 @@ void fastica() {
 }
 
 int main() {
-	/* mix signals */
-	//mix_signals();
-
 	/* find unmixing vector */ 
 	fastica();
 	printf("The unmixing vector is : [%f %f]\n",((float)w_Q6_10[0])/1024,((float)w_Q6_10[1])/1024);
