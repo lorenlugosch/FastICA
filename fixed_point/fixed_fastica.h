@@ -9,8 +9,6 @@
 #define Q11_21 int32_t
 #define Q21_43 int64_t
 
-int iteration = 0;
-
 /* "randomly initialized" unmixing vector */
 Q6_10 w_next_Q6_10[N] = 
 {

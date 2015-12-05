@@ -5,8 +5,6 @@
 #define DBL2HEX(a) (*(unsigned *)&a) /* (taken from LegUp examples) */
 #define fabs(a) ((a) > 0.0 ? (a) : -(a)) /* floating absolute value (taken from LegUp examples) */
 
-int iteration = 0;
-
 /* mixing matrix */
 float A[N][N] = {
   {0.2217, 1.3092},

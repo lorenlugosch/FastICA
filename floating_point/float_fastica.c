@@ -3,11 +3,6 @@
 #include <math.h>
 #include "float_fastica.h"
 
-// /* reciprocal square root */
-// float rsqrt(float input) {
-
-// }
-
 void update_w() {
 	int i;
 	for (i = 0; i < N; i++) {
@@ -72,9 +67,7 @@ float rsqrt(float input) {
 	
 	else if ((input >= 500) && (input < 1000)) 	{a = -0.00002543; b = 0.0561;}
 	else if ((input >= 1000))  {a = -0.00000899; b = 0.0397;}
-	// else if (input >= 2000) 					{a = -0.00000318; b = 0.0281;}
 
-//printf("reciprocal square root of %f is %f\n", input,a*input + b);
 	return a*input + b;
 	// return 1/sqrtf(input);
 }
@@ -113,7 +106,6 @@ int converged() {
 Update step in optimization loop.
 */
 void rotate() {
-	iteration++;
 	int n,t;
 	for (t = 0; t < T; t++) {
 		product_1[t] = 0;
@@ -160,29 +152,15 @@ Main computation.
 Finds one of the vectors of the unmixing matrix.
 */
 void fastica() {
-	// w[0] = 0.5;
-	// w[1] = 0.5;
-	// w_next[0] = 0.6;
-	// w_next[1] = 0.7;
-	// rotate();
-	// normalize();
-	// while(1);
-
 	/* rotate, normalize, and repeat */
 	while(!converged()) {
-		//printf("iteration %d : w = [%f %f], w_next = [%f %f]\n",iteration,w[0],w[1],w_next[0],w_next[1]);//DBL2HEX(w[0]),DBL2HEX(w[1]),DBL2HEX(w_next[0]),DBL2HEX(w_next[1]));
-		printf("iteration %d :\n", iteration);
 		update_w();
 		rotate();
 		normalize();
-		if (iteration > 10) { printf("too many iterations!\n"); break; }
 	}
 }
 
 int main() {
-	/* mix signals */
-	//mix_signals();
-
 	/* find unmixing vector */ 
 	fastica();
 	printf("The unmixing vector is : [%u %u]\n",DBL2HEX(w[0]),DBL2HEX(w[1]));//DBL2HEX(w[0]),DBL2HEX(w[1]));

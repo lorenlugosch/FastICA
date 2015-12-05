@@ -3,31 +3,6 @@
 #include <stdint.h>
 #include "fixed_fastica.h"
 
-/*
-float Q6_10_to_float(Q6_10 input) {
-	return ((float)input) / 1024;
-}
-
-float Q11_21_to_float(Q11_21 input) {
-	return ((float)input) / 2097152;
-}
-
-float Q21_43_to_float(Q21_43 input) {
-	return ((float)input) / 8796093022208;
-}
-
-Q6_10 float_to_Q6_10(float input) {
-	return (Q6_10)(input*1024);
-}
-
-Q11_21 float_to_Q11_21(float input) {
-	return (Q11_21)(input*2097152);
-}
-
-Q21_43 float_to_Q21_43(float input) {
-	return (Q11_21)(input*8796093022208);
-}*/
-
 Q11_21 multiply_Q6_10_by_Q6_10(Q6_10 a, Q6_10 b) {
 	//if ((a == b) && (a == -65536)) { return 65535; }
 	Q11_21 cc = (Q11_21)a * (Q11_21)b * 2;
@@ -148,7 +123,6 @@ int converged() {
 Update step in optimization loop.
 */
 void rotate() {
-	iteration++;
 	int n,t;
 	for (t = 0; t < T; t++) {
 		product_1[t] = 0;
@@ -190,7 +164,6 @@ void normalize() {
 	for (i = 0; i < N; i++) {
 		w_next_Q21_43[i] = multiply_Q11_21_by_Q11_21(w_rnorm, w_next_Q11_21[i]);
 		w_next_Q6_10[i] = (Q6_10)(w_next_Q21_43[i] >> 33);
-		printf("w_next: %d\n",w_next_Q6_10[i]);
 	}
 }
 
@@ -201,8 +174,6 @@ Finds one of the vectors of the unmixing matrix.
 void fastica() {
 	/* rotate, normalize, and repeat */
 	while(!converged()) {
-		//printf("iteration %d : w = [%f %f], w_next = [%f %f]\n",iteration,((float)w_Q6_10[0])/1024,((float)w_Q6_10[1])/1024,((float)w_next_Q6_10[0])/1024,((float)w_next_Q6_10[1])/1024);
-		printf("iteration %d :\n",iteration);
 		update_w();
 		rotate();
 		normalize();
