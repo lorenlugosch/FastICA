@@ -4,21 +4,18 @@
 // University of Toronto
 // For research and academic purposes only. Commercial use is prohibited.
 // Please send bugs to: legup@eecg.toronto.edu
-// Date: Sat Dec  5 13:42:51 2015
+// Date: Sat Dec  5 16:33:38 2015
 //----------------------------------------------------------------------------//
 
 `define MEMORY_CONTROLLER_ADDR_SIZE 32
 `define MEMORY_CONTROLLER_DATA_SIZE 64
-// Number of RAM elements: 3
+// Number of RAM elements: 2
 `define MEMORY_CONTROLLER_TAG_SIZE 9
 // @product_1 = internal unnamed_addr global [64 x float] zeroinitializer, align 4
-`define TAG_g_product_1 `MEMORY_CONTROLLER_TAG_SIZE'd4
+`define TAG_g_product_1 `MEMORY_CONTROLLER_TAG_SIZE'd3
 `define TAG_g_product_1_a {`TAG_g_product_1, 23'd0}
-// @w = internal unnamed_addr global [2 x float] [float 0xBFA35A8580000000, float 0x3FD9D7DC00000000], align 4
-`define TAG_g_w `MEMORY_CONTROLLER_TAG_SIZE'd2
-`define TAG_g_w_a {`TAG_g_w, 23'd0}
 // @whitened_signals = internal unnamed_addr constant [2 x [64 x float]] [[64 x float] [float 0x3FA8B82720000000, float 0x3FF1F120E0000000, float 0x3FF323AA60000000, float 0x3FC8538EC0000000, float 0xBFE...
-`define TAG_g_whitened_signals `MEMORY_CONTROLLER_TAG_SIZE'd3
+`define TAG_g_whitened_signals `MEMORY_CONTROLLER_TAG_SIZE'd2
 `define TAG_g_whitened_signals_a {`TAG_g_whitened_signals, 23'd0}
 
 // Turn off warning 'ignoring unsupported system task'
@@ -149,41 +146,6 @@ reg [64-1:0] memory_controller_out_b;
 
 reg memory_controller_enable_reg_b;
 
-reg [0:0] w_address_a;
-reg [0:0] w_address_b;
-reg w_write_enable_a;
-reg w_write_enable_b;
-reg [31:0] w_in_a;
-reg [31:0] w_in_b;
-wire [31:0] w_out_a;
-wire [31:0] w_out_b;
-
-// @w = internal unnamed_addr global [2 x float] [float 0xBFA35A8580000000, float 0x3FD9D7DC00000000], align 4
-ram_dual_port w (
-	.clk( clk ),
-	.clken( !memory_controller_waitrequest ),
-	.address_a( w_address_a ),
-	.address_b( w_address_b ),
-	.wren_a( w_write_enable_a ),
-	.wren_b( w_write_enable_b ),
-	.data_a( w_in_a ),
-	.data_b( w_in_b ),
-	.byteena_a( 1'b1 ),
-	.byteena_b( 1'b1 ),
-	.q_a( w_out_a ),
-	.q_b( w_out_b)
-);
-defparam w.width_a = 32;
-defparam w.width_b = 32;
-defparam w.widthad_a = 1;
-defparam w.widthad_b = 1;
-defparam w.width_be_a = 1;
-defparam w.width_be_b = 1;
-defparam w.numwords_a = 2;
-defparam w.numwords_b = 2;
-defparam w.latency = ram_latency;
-defparam w.init_file = "w.mif";
-
 reg [6:0] whitened_signals_address_a;
 reg [6:0] whitened_signals_address_b;
 reg whitened_signals_write_enable_a;
@@ -272,12 +234,6 @@ end
 
 reg [2:0] select_not_struct_a;
 
-wire select_w_a;
-assign select_w_a = (tag_a == `TAG_g_w);
-reg [ram_latency:0] select_w_reg_a;
-wire [31:0] memory_controller_w_out_a;
-assign memory_controller_w_out_a = {32{ select_w_reg_a[ram_latency]}} & w_out_a;
-
 wire select_whitened_signals_a;
 assign select_whitened_signals_a = (tag_a == `TAG_g_whitened_signals);
 reg [ram_latency:0] select_whitened_signals_reg_a;
@@ -292,10 +248,6 @@ assign memory_controller_product_1_out_a = {32{ select_product_1_reg_a[ram_laten
 
 always @(*)
 begin
-	w_address_a = memory_controller_address_a [1-1+2:2] & {1{select_w_a}};
-	w_write_enable_a = memory_controller_write_enable_a & select_w_a;
-	w_in_a [32-1:0] = memory_controller_in_a[32-1:0];
-
 	whitened_signals_address_a = memory_controller_address_a [7-1+2:2] & {7{select_whitened_signals_a}};
 	whitened_signals_write_enable_a = memory_controller_write_enable_a & select_whitened_signals_a;
 	whitened_signals_in_a [32-1:0] = memory_controller_in_a[32-1:0];
@@ -307,7 +259,7 @@ begin
 end
 always @(*)
 begin
-	select_not_struct_a [2:0] = 3'b0 | {2{select_w_reg_a[ram_latency]}} | {2{select_whitened_signals_reg_a[ram_latency]}} | {2{select_product_1_reg_a[ram_latency]}};
+	select_not_struct_a [2:0] = 3'b0 | {2{select_whitened_signals_reg_a[ram_latency]}} | {2{select_product_1_reg_a[ram_latency]}};
 	if (prevAddr_a[2:0] & select_not_struct_a[2:0] != 0 && memory_controller_enable_a)
 	begin
 		$display("Error: memory address not aligned to ram word size!");
@@ -323,7 +275,7 @@ begin
 		$finish;
 	end
 	memory_controller_out_prev_a = memory_controller_out_reg_a & { 64{!memory_controller_enable_reg_a}};
-	memory_controller_out_a = 1'b0 | memory_controller_out_prev_a | memory_controller_w_out_a | memory_controller_whitened_signals_out_a | memory_controller_product_1_out_a;
+	memory_controller_out_a = 1'b0 | memory_controller_out_prev_a | memory_controller_whitened_signals_out_a | memory_controller_product_1_out_a;
 end
 
 always @(posedge clk)
@@ -337,24 +289,16 @@ always @(posedge clk)
 if (!memory_controller_waitrequest)
 for (j = 0; j < ram_latency; j=j+1)
 begin
-select_w_reg_a[j+1] <= select_w_reg_a[j];
 select_whitened_signals_reg_a[j+1] <= select_whitened_signals_reg_a[j];
 select_product_1_reg_a[j+1] <= select_product_1_reg_a[j];
 end
 always @(*)
 begin
-select_w_reg_a[0] <= select_w_a;
 select_whitened_signals_reg_a[0] <= select_whitened_signals_a;
 select_product_1_reg_a[0] <= select_product_1_a;
 end
 
 reg [2:0] select_not_struct_b;
-
-wire select_w_b;
-assign select_w_b = (tag_b == `TAG_g_w);
-reg [ram_latency:0] select_w_reg_b;
-wire [31:0] memory_controller_w_out_b;
-assign memory_controller_w_out_b = {32{ select_w_reg_b[ram_latency]}} & w_out_b;
 
 wire select_whitened_signals_b;
 assign select_whitened_signals_b = (tag_b == `TAG_g_whitened_signals);
@@ -370,10 +314,6 @@ assign memory_controller_product_1_out_b = {32{ select_product_1_reg_b[ram_laten
 
 always @(*)
 begin
-	w_address_b = memory_controller_address_b [1-1+2:2] & {1{select_w_b}};
-	w_write_enable_b = memory_controller_write_enable_b & select_w_b;
-	w_in_b [32-1:0] = memory_controller_in_b[32-1:0];
-
 	whitened_signals_address_b = memory_controller_address_b [7-1+2:2] & {7{select_whitened_signals_b}};
 	whitened_signals_write_enable_b = memory_controller_write_enable_b & select_whitened_signals_b;
 	whitened_signals_in_b [32-1:0] = memory_controller_in_b[32-1:0];
@@ -385,7 +325,7 @@ begin
 end
 always @(*)
 begin
-	select_not_struct_b [2:0] = 3'b0 | {2{select_w_reg_b[ram_latency]}} | {2{select_whitened_signals_reg_b[ram_latency]}} | {2{select_product_1_reg_b[ram_latency]}};
+	select_not_struct_b [2:0] = 3'b0 | {2{select_whitened_signals_reg_b[ram_latency]}} | {2{select_product_1_reg_b[ram_latency]}};
 	if (prevAddr_b[2:0] & select_not_struct_b[2:0] != 0 && memory_controller_enable_b)
 	begin
 		$display("Error: memory address not aligned to ram word size!");
@@ -401,7 +341,7 @@ begin
 		$finish;
 	end
 	memory_controller_out_prev_b = memory_controller_out_reg_b & { 64{!memory_controller_enable_reg_b}};
-	memory_controller_out_b = 1'b0 | memory_controller_out_prev_b | memory_controller_w_out_b | memory_controller_whitened_signals_out_b | memory_controller_product_1_out_b;
+	memory_controller_out_b = 1'b0 | memory_controller_out_prev_b | memory_controller_whitened_signals_out_b | memory_controller_product_1_out_b;
 end
 
 always @(posedge clk)
@@ -415,13 +355,11 @@ always @(posedge clk)
 if (!memory_controller_waitrequest)
 for (j = 0; j < ram_latency; j=j+1)
 begin
-select_w_reg_b[j+1] <= select_w_reg_b[j];
 select_whitened_signals_reg_b[j+1] <= select_whitened_signals_reg_b[j];
 select_product_1_reg_b[j+1] <= select_product_1_reg_b[j];
 end
 always @(*)
 begin
-select_w_reg_b[0] <= select_w_b;
 select_whitened_signals_reg_b[0] <= select_whitened_signals_b;
 select_product_1_reg_b[0] <= select_product_1_b;
 end
@@ -454,9 +392,9 @@ module main
 );
 
 parameter [9:0] LEGUP_0 = 10'd0;
-parameter [9:0] LEGUP_F_main_BB__0_1 = 10'd1;
-parameter [9:0] LEGUP_F_main_BB__0_2 = 10'd2;
-parameter [9:0] LEGUP_F_main_BB__0_3 = 10'd3;
+parameter [9:0] LEGUP_F_main_BB__1_1 = 10'd1;
+parameter [9:0] LEGUP_F_main_BB__1_2 = 10'd2;
+parameter [9:0] LEGUP_F_main_BB__1_3 = 10'd3;
 parameter [9:0] LEGUP_F_main_BB__1_4 = 10'd4;
 parameter [9:0] LEGUP_F_main_BB__1_5 = 10'd5;
 parameter [9:0] LEGUP_F_main_BB__1_6 = 10'd6;
@@ -495,190 +433,190 @@ parameter [9:0] LEGUP_F_main_BB__1_38 = 10'd38;
 parameter [9:0] LEGUP_F_main_BB__1_39 = 10'd39;
 parameter [9:0] LEGUP_F_main_BB__1_40 = 10'd40;
 parameter [9:0] LEGUP_F_main_BB__1_41 = 10'd41;
-parameter [9:0] LEGUP_F_main_BB__1_42 = 10'd42;
-parameter [9:0] LEGUP_F_main_BB__1_43 = 10'd43;
-parameter [9:0] LEGUP_F_main_BB__1_44 = 10'd44;
-parameter [9:0] LEGUP_F_main_BB__8_45 = 10'd45;
-parameter [9:0] LEGUP_F_main_BB__8_46 = 10'd46;
-parameter [9:0] LEGUP_F_main_BB__8_47 = 10'd47;
-parameter [9:0] LEGUP_F_main_BB__8_48 = 10'd48;
-parameter [9:0] LEGUP_F_main_BB__8_49 = 10'd49;
-parameter [9:0] LEGUP_F_main_BB__8_50 = 10'd50;
-parameter [9:0] LEGUP_F_main_BB__8_51 = 10'd51;
-parameter [9:0] LEGUP_F_main_BB__8_52 = 10'd52;
-parameter [9:0] LEGUP_F_main_BB__8_53 = 10'd53;
-parameter [9:0] LEGUP_F_main_BB__8_54 = 10'd54;
-parameter [9:0] LEGUP_F_main_BB__8_55 = 10'd55;
-parameter [9:0] LEGUP_F_main_BB__8_56 = 10'd56;
-parameter [9:0] LEGUP_F_main_BB__8_57 = 10'd57;
-parameter [9:0] LEGUP_F_main_BB__8_58 = 10'd58;
-parameter [9:0] LEGUP_F_main_BB__8_59 = 10'd59;
-parameter [9:0] LEGUP_F_main_BB__10_60 = 10'd60;
-parameter [9:0] LEGUP_F_main_BB__10_61 = 10'd61;
-parameter [9:0] LEGUP_F_main_BB__10_62 = 10'd62;
-parameter [9:0] LEGUP_F_main_BB__10_63 = 10'd63;
-parameter [9:0] LEGUP_F_main_BB__10_64 = 10'd64;
-parameter [9:0] LEGUP_F_main_BB__10_65 = 10'd65;
-parameter [9:0] LEGUP_F_main_BB__10_66 = 10'd66;
-parameter [9:0] LEGUP_F_main_BB__10_67 = 10'd67;
-parameter [9:0] LEGUP_F_main_BB__10_68 = 10'd68;
-parameter [9:0] LEGUP_F_main_BB__10_69 = 10'd69;
-parameter [9:0] LEGUP_F_main_BB__10_70 = 10'd70;
-parameter [9:0] LEGUP_F_main_BB__10_71 = 10'd71;
-parameter [9:0] LEGUP_F_main_BB__10_72 = 10'd72;
-parameter [9:0] LEGUP_F_main_BB__10_73 = 10'd73;
-parameter [9:0] LEGUP_F_main_BB__10_74 = 10'd74;
-parameter [9:0] LEGUP_F_main_BB__10_75 = 10'd75;
-parameter [9:0] LEGUP_F_main_BB__14_76 = 10'd76;
-parameter [9:0] LEGUP_F_main_BB__15_77 = 10'd77;
-parameter [9:0] LEGUP_F_main_BB__15_78 = 10'd78;
-parameter [9:0] LEGUP_F_main_BB__15_79 = 10'd79;
-parameter [9:0] LEGUP_F_main_BB__15_80 = 10'd80;
-parameter [9:0] LEGUP_F_main_BB__15_81 = 10'd81;
-parameter [9:0] LEGUP_F_main_BB__15_82 = 10'd82;
-parameter [9:0] LEGUP_F_main_BB__15_83 = 10'd83;
-parameter [9:0] LEGUP_F_main_BB__15_84 = 10'd84;
-parameter [9:0] LEGUP_F_main_BB__15_85 = 10'd85;
-parameter [9:0] LEGUP_F_main_BB__15_86 = 10'd86;
-parameter [9:0] LEGUP_F_main_BB__15_87 = 10'd87;
-parameter [9:0] LEGUP_F_main_BB__15_88 = 10'd88;
-parameter [9:0] LEGUP_F_main_BB__15_89 = 10'd89;
-parameter [9:0] LEGUP_F_main_BB__15_90 = 10'd90;
-parameter [9:0] LEGUP_F_main_BB__15_91 = 10'd91;
-parameter [9:0] LEGUP_F_main_BB__17_92 = 10'd92;
-parameter [9:0] LEGUP_F_main_BB__17_93 = 10'd93;
-parameter [9:0] LEGUP_F_main_BB__17_94 = 10'd94;
-parameter [9:0] LEGUP_F_main_BB__17_95 = 10'd95;
-parameter [9:0] LEGUP_F_main_BB__17_96 = 10'd96;
-parameter [9:0] LEGUP_F_main_BB__17_97 = 10'd97;
-parameter [9:0] LEGUP_F_main_BB__17_98 = 10'd98;
-parameter [9:0] LEGUP_F_main_BB__17_99 = 10'd99;
-parameter [9:0] LEGUP_F_main_BB__17_100 = 10'd100;
-parameter [9:0] LEGUP_F_main_BB__17_101 = 10'd101;
-parameter [9:0] LEGUP_F_main_BB__17_102 = 10'd102;
-parameter [9:0] LEGUP_F_main_BB__17_103 = 10'd103;
-parameter [9:0] LEGUP_F_main_BB__17_104 = 10'd104;
-parameter [9:0] LEGUP_F_main_BB__17_105 = 10'd105;
-parameter [9:0] LEGUP_F_main_BB__17_106 = 10'd106;
-parameter [9:0] LEGUP_F_main_BB__20_107 = 10'd107;
-parameter [9:0] LEGUP_F_main_BB__21_108 = 10'd108;
-parameter [9:0] LEGUP_F_main_BB__21_109 = 10'd109;
-parameter [9:0] LEGUP_F_main_BB__21_110 = 10'd110;
-parameter [9:0] LEGUP_F_main_BB__21_111 = 10'd111;
-parameter [9:0] LEGUP_F_main_BB__21_112 = 10'd112;
-parameter [9:0] LEGUP_F_main_BB__21_113 = 10'd113;
-parameter [9:0] LEGUP_F_main_BB__21_114 = 10'd114;
-parameter [9:0] LEGUP_F_main_BB__21_115 = 10'd115;
-parameter [9:0] LEGUP_F_main_BB__21_116 = 10'd116;
-parameter [9:0] LEGUP_F_main_BB__21_117 = 10'd117;
-parameter [9:0] LEGUP_F_main_BB__21_118 = 10'd118;
-parameter [9:0] LEGUP_F_main_BB__21_119 = 10'd119;
-parameter [9:0] LEGUP_F_main_BB__21_120 = 10'd120;
-parameter [9:0] LEGUP_F_main_BB__21_121 = 10'd121;
-parameter [9:0] LEGUP_F_main_BB__21_122 = 10'd122;
-parameter [9:0] LEGUP_F_main_BB__23_123 = 10'd123;
-parameter [9:0] LEGUP_F_main_BB__23_124 = 10'd124;
-parameter [9:0] LEGUP_F_main_BB__23_125 = 10'd125;
-parameter [9:0] LEGUP_F_main_BB__23_126 = 10'd126;
-parameter [9:0] LEGUP_F_main_BB__23_127 = 10'd127;
-parameter [9:0] LEGUP_F_main_BB__23_128 = 10'd128;
-parameter [9:0] LEGUP_F_main_BB__23_129 = 10'd129;
-parameter [9:0] LEGUP_F_main_BB__23_130 = 10'd130;
-parameter [9:0] LEGUP_F_main_BB__23_131 = 10'd131;
-parameter [9:0] LEGUP_F_main_BB__23_132 = 10'd132;
-parameter [9:0] LEGUP_F_main_BB__23_133 = 10'd133;
-parameter [9:0] LEGUP_F_main_BB__23_134 = 10'd134;
-parameter [9:0] LEGUP_F_main_BB__23_135 = 10'd135;
-parameter [9:0] LEGUP_F_main_BB__23_136 = 10'd136;
-parameter [9:0] LEGUP_F_main_BB__23_137 = 10'd137;
-parameter [9:0] LEGUP_F_main_BB__23_138 = 10'd138;
-parameter [9:0] LEGUP_F_main_BB__23_139 = 10'd139;
-parameter [9:0] LEGUP_F_main_BB__23_140 = 10'd140;
-parameter [9:0] LEGUP_F_main_BB__23_141 = 10'd141;
-parameter [9:0] LEGUP_F_main_BB__23_142 = 10'd142;
-parameter [9:0] LEGUP_F_main_BB__23_143 = 10'd143;
-parameter [9:0] LEGUP_F_main_BB__23_144 = 10'd144;
-parameter [9:0] LEGUP_F_main_BB__23_145 = 10'd145;
-parameter [9:0] LEGUP_F_main_BB__23_146 = 10'd146;
-parameter [9:0] LEGUP_F_main_BB__23_147 = 10'd147;
-parameter [9:0] LEGUP_F_main_BB__23_148 = 10'd148;
-parameter [9:0] LEGUP_F_main_BB__23_149 = 10'd149;
-parameter [9:0] LEGUP_F_main_BB__23_150 = 10'd150;
-parameter [9:0] LEGUP_F_main_BB__23_151 = 10'd151;
+parameter [9:0] LEGUP_F_main_BB__13_42 = 10'd42;
+parameter [9:0] LEGUP_F_main_BB__13_43 = 10'd43;
+parameter [9:0] LEGUP_F_main_BB__13_44 = 10'd44;
+parameter [9:0] LEGUP_F_main_BB__13_45 = 10'd45;
+parameter [9:0] LEGUP_F_main_BB__13_46 = 10'd46;
+parameter [9:0] LEGUP_F_main_BB__13_47 = 10'd47;
+parameter [9:0] LEGUP_F_main_BB__13_48 = 10'd48;
+parameter [9:0] LEGUP_F_main_BB__13_49 = 10'd49;
+parameter [9:0] LEGUP_F_main_BB__13_50 = 10'd50;
+parameter [9:0] LEGUP_F_main_BB__13_51 = 10'd51;
+parameter [9:0] LEGUP_F_main_BB__13_52 = 10'd52;
+parameter [9:0] LEGUP_F_main_BB__13_53 = 10'd53;
+parameter [9:0] LEGUP_F_main_BB__13_54 = 10'd54;
+parameter [9:0] LEGUP_F_main_BB__13_55 = 10'd55;
+parameter [9:0] LEGUP_F_main_BB__13_56 = 10'd56;
+parameter [9:0] LEGUP_F_main_BB__15_57 = 10'd57;
+parameter [9:0] LEGUP_F_main_BB__15_58 = 10'd58;
+parameter [9:0] LEGUP_F_main_BB__15_59 = 10'd59;
+parameter [9:0] LEGUP_F_main_BB__15_60 = 10'd60;
+parameter [9:0] LEGUP_F_main_BB__15_61 = 10'd61;
+parameter [9:0] LEGUP_F_main_BB__15_62 = 10'd62;
+parameter [9:0] LEGUP_F_main_BB__15_63 = 10'd63;
+parameter [9:0] LEGUP_F_main_BB__15_64 = 10'd64;
+parameter [9:0] LEGUP_F_main_BB__15_65 = 10'd65;
+parameter [9:0] LEGUP_F_main_BB__15_66 = 10'd66;
+parameter [9:0] LEGUP_F_main_BB__15_67 = 10'd67;
+parameter [9:0] LEGUP_F_main_BB__15_68 = 10'd68;
+parameter [9:0] LEGUP_F_main_BB__15_69 = 10'd69;
+parameter [9:0] LEGUP_F_main_BB__15_70 = 10'd70;
+parameter [9:0] LEGUP_F_main_BB__15_71 = 10'd71;
+parameter [9:0] LEGUP_F_main_BB__15_72 = 10'd72;
+parameter [9:0] LEGUP_F_main_BB__19_73 = 10'd73;
+parameter [9:0] LEGUP_F_main_BB__20_74 = 10'd74;
+parameter [9:0] LEGUP_F_main_BB__20_75 = 10'd75;
+parameter [9:0] LEGUP_F_main_BB__20_76 = 10'd76;
+parameter [9:0] LEGUP_F_main_BB__20_77 = 10'd77;
+parameter [9:0] LEGUP_F_main_BB__20_78 = 10'd78;
+parameter [9:0] LEGUP_F_main_BB__20_79 = 10'd79;
+parameter [9:0] LEGUP_F_main_BB__20_80 = 10'd80;
+parameter [9:0] LEGUP_F_main_BB__20_81 = 10'd81;
+parameter [9:0] LEGUP_F_main_BB__20_82 = 10'd82;
+parameter [9:0] LEGUP_F_main_BB__20_83 = 10'd83;
+parameter [9:0] LEGUP_F_main_BB__20_84 = 10'd84;
+parameter [9:0] LEGUP_F_main_BB__20_85 = 10'd85;
+parameter [9:0] LEGUP_F_main_BB__20_86 = 10'd86;
+parameter [9:0] LEGUP_F_main_BB__20_87 = 10'd87;
+parameter [9:0] LEGUP_F_main_BB__20_88 = 10'd88;
+parameter [9:0] LEGUP_F_main_BB__22_89 = 10'd89;
+parameter [9:0] LEGUP_F_main_BB__22_90 = 10'd90;
+parameter [9:0] LEGUP_F_main_BB__22_91 = 10'd91;
+parameter [9:0] LEGUP_F_main_BB__22_92 = 10'd92;
+parameter [9:0] LEGUP_F_main_BB__22_93 = 10'd93;
+parameter [9:0] LEGUP_F_main_BB__22_94 = 10'd94;
+parameter [9:0] LEGUP_F_main_BB__22_95 = 10'd95;
+parameter [9:0] LEGUP_F_main_BB__22_96 = 10'd96;
+parameter [9:0] LEGUP_F_main_BB__22_97 = 10'd97;
+parameter [9:0] LEGUP_F_main_BB__22_98 = 10'd98;
+parameter [9:0] LEGUP_F_main_BB__22_99 = 10'd99;
+parameter [9:0] LEGUP_F_main_BB__22_100 = 10'd100;
+parameter [9:0] LEGUP_F_main_BB__22_101 = 10'd101;
+parameter [9:0] LEGUP_F_main_BB__22_102 = 10'd102;
+parameter [9:0] LEGUP_F_main_BB__22_103 = 10'd103;
+parameter [9:0] LEGUP_F_main_BB__25_104 = 10'd104;
+parameter [9:0] LEGUP_F_main_BB__26_105 = 10'd105;
+parameter [9:0] LEGUP_F_main_BB__26_106 = 10'd106;
+parameter [9:0] LEGUP_F_main_BB__26_107 = 10'd107;
+parameter [9:0] LEGUP_F_main_BB__26_108 = 10'd108;
+parameter [9:0] LEGUP_F_main_BB__26_109 = 10'd109;
+parameter [9:0] LEGUP_F_main_BB__26_110 = 10'd110;
+parameter [9:0] LEGUP_F_main_BB__26_111 = 10'd111;
+parameter [9:0] LEGUP_F_main_BB__26_112 = 10'd112;
+parameter [9:0] LEGUP_F_main_BB__26_113 = 10'd113;
+parameter [9:0] LEGUP_F_main_BB__26_114 = 10'd114;
+parameter [9:0] LEGUP_F_main_BB__26_115 = 10'd115;
+parameter [9:0] LEGUP_F_main_BB__26_116 = 10'd116;
+parameter [9:0] LEGUP_F_main_BB__26_117 = 10'd117;
+parameter [9:0] LEGUP_F_main_BB__26_118 = 10'd118;
+parameter [9:0] LEGUP_F_main_BB__26_119 = 10'd119;
+parameter [9:0] LEGUP_F_main_BB__28_120 = 10'd120;
+parameter [9:0] LEGUP_F_main_BB__28_121 = 10'd121;
+parameter [9:0] LEGUP_F_main_BB__28_122 = 10'd122;
+parameter [9:0] LEGUP_F_main_BB__28_123 = 10'd123;
+parameter [9:0] LEGUP_F_main_BB__28_124 = 10'd124;
+parameter [9:0] LEGUP_F_main_BB__28_125 = 10'd125;
+parameter [9:0] LEGUP_F_main_BB__28_126 = 10'd126;
+parameter [9:0] LEGUP_F_main_BB__28_127 = 10'd127;
+parameter [9:0] LEGUP_F_main_BB__28_128 = 10'd128;
+parameter [9:0] LEGUP_F_main_BB__28_129 = 10'd129;
+parameter [9:0] LEGUP_F_main_BB__28_130 = 10'd130;
+parameter [9:0] LEGUP_F_main_BB__28_131 = 10'd131;
+parameter [9:0] LEGUP_F_main_BB__28_132 = 10'd132;
+parameter [9:0] LEGUP_F_main_BB__28_133 = 10'd133;
+parameter [9:0] LEGUP_F_main_BB__28_134 = 10'd134;
+parameter [9:0] LEGUP_F_main_BB__28_135 = 10'd135;
+parameter [9:0] LEGUP_F_main_BB__28_136 = 10'd136;
+parameter [9:0] LEGUP_F_main_BB__28_137 = 10'd137;
+parameter [9:0] LEGUP_F_main_BB__28_138 = 10'd138;
+parameter [9:0] LEGUP_F_main_BB__28_139 = 10'd139;
+parameter [9:0] LEGUP_F_main_BB__28_140 = 10'd140;
+parameter [9:0] LEGUP_F_main_BB__28_141 = 10'd141;
+parameter [9:0] LEGUP_F_main_BB__28_142 = 10'd142;
+parameter [9:0] LEGUP_F_main_BB__28_143 = 10'd143;
+parameter [9:0] LEGUP_F_main_BB__28_144 = 10'd144;
+parameter [9:0] LEGUP_F_main_BB__28_145 = 10'd145;
+parameter [9:0] LEGUP_F_main_BB__28_146 = 10'd146;
+parameter [9:0] LEGUP_F_main_BB__28_147 = 10'd147;
+parameter [9:0] LEGUP_F_main_BB__28_148 = 10'd148;
+parameter [9:0] LEGUP_F_main_BB_convergedexiti_149 = 10'd149;
+parameter [9:0] LEGUP_F_main_BB_convergedexiti_150 = 10'd150;
+parameter [9:0] LEGUP_F_main_BB_convergedexiti_151 = 10'd151;
 parameter [9:0] LEGUP_F_main_BB_convergedexiti_152 = 10'd152;
-parameter [9:0] LEGUP_F_main_BB_convergedexiti_153 = 10'd153;
-parameter [9:0] LEGUP_F_main_BB_convergedexiti_154 = 10'd154;
-parameter [9:0] LEGUP_F_main_BB_convergedexiti_155 = 10'd155;
-parameter [9:0] LEGUP_F_main_BB__30_156 = 10'd156;
-parameter [9:0] LEGUP_F_main_BB__30_157 = 10'd157;
-parameter [9:0] LEGUP_F_main_BB__32_158 = 10'd158;
-parameter [9:0] LEGUP_F_main_BB__32_159 = 10'd159;
-parameter [9:0] LEGUP_F_main_BB__32_160 = 10'd160;
-parameter [9:0] LEGUP_F_main_BB__32_161 = 10'd161;
-parameter [9:0] LEGUP_F_main_BB__32_162 = 10'd162;
-parameter [9:0] LEGUP_F_main_BB__32_163 = 10'd163;
-parameter [9:0] LEGUP_F_main_BB__32_164 = 10'd164;
-parameter [9:0] LEGUP_F_main_BB__32_165 = 10'd165;
-parameter [9:0] LEGUP_F_main_BB__32_166 = 10'd166;
-parameter [9:0] LEGUP_F_main_BB__32_167 = 10'd167;
-parameter [9:0] LEGUP_F_main_BB__32_168 = 10'd168;
-parameter [9:0] LEGUP_F_main_BB__32_169 = 10'd169;
-parameter [9:0] LEGUP_F_main_BB__32_170 = 10'd170;
-parameter [9:0] LEGUP_F_main_BB__32_171 = 10'd171;
-parameter [9:0] LEGUP_F_main_BB__32_172 = 10'd172;
-parameter [9:0] LEGUP_F_main_BB__32_173 = 10'd173;
-parameter [9:0] LEGUP_F_main_BB__32_174 = 10'd174;
-parameter [9:0] LEGUP_F_main_BB__32_175 = 10'd175;
-parameter [9:0] LEGUP_F_main_BB__32_176 = 10'd176;
-parameter [9:0] LEGUP_F_main_BB__32_177 = 10'd177;
-parameter [9:0] LEGUP_F_main_BB__32_178 = 10'd178;
-parameter [9:0] LEGUP_F_main_BB__32_179 = 10'd179;
-parameter [9:0] LEGUP_F_main_BB__32_180 = 10'd180;
-parameter [9:0] LEGUP_F_main_BB__32_181 = 10'd181;
-parameter [9:0] LEGUP_F_main_BB__32_182 = 10'd182;
-parameter [9:0] LEGUP_F_main_BB__32_183 = 10'd183;
-parameter [9:0] LEGUP_F_main_BB__32_184 = 10'd184;
-parameter [9:0] LEGUP_F_main_BB__32_185 = 10'd185;
-parameter [9:0] LEGUP_F_main_BB__32_186 = 10'd186;
-parameter [9:0] LEGUP_F_main_BB__32_187 = 10'd187;
-parameter [9:0] LEGUP_F_main_BB__32_188 = 10'd188;
-parameter [9:0] LEGUP_F_main_BB__32_189 = 10'd189;
-parameter [9:0] LEGUP_F_main_BB__32_190 = 10'd190;
-parameter [9:0] LEGUP_F_main_BB__32_191 = 10'd191;
-parameter [9:0] LEGUP_F_main_BB__32_192 = 10'd192;
-parameter [9:0] LEGUP_F_main_BB__32_193 = 10'd193;
-parameter [9:0] LEGUP_F_main_BB__32_194 = 10'd194;
-parameter [9:0] LEGUP_F_main_BB__32_195 = 10'd195;
-parameter [9:0] LEGUP_F_main_BB__32_196 = 10'd196;
-parameter [9:0] LEGUP_F_main_BB__32_197 = 10'd197;
-parameter [9:0] LEGUP_F_main_BB__32_198 = 10'd198;
-parameter [9:0] LEGUP_F_main_BB__32_199 = 10'd199;
-parameter [9:0] LEGUP_F_main_BB__32_200 = 10'd200;
-parameter [9:0] LEGUP_F_main_BB_preheader15iipreheader_201 = 10'd201;
-parameter [9:0] LEGUP_F_main_BB_preheader15ii_202 = 10'd202;
-parameter [9:0] LEGUP_F_main_BB_preheader15ii_203 = 10'd203;
-parameter [9:0] LEGUP_F_main_BB_preheader15ii_204 = 10'd204;
-parameter [9:0] LEGUP_F_main_BB_preheader15ii_205 = 10'd205;
-parameter [9:0] LEGUP_F_main_BB__44_206 = 10'd206;
-parameter [9:0] LEGUP_F_main_BB__44_207 = 10'd207;
-parameter [9:0] LEGUP_F_main_BB__47_208 = 10'd208;
-parameter [9:0] LEGUP_F_main_BB__47_209 = 10'd209;
-parameter [9:0] LEGUP_F_main_BB__50_210 = 10'd210;
-parameter [9:0] LEGUP_F_main_BB__50_211 = 10'd211;
-parameter [9:0] LEGUP_F_main_BB__53_212 = 10'd212;
-parameter [9:0] LEGUP_F_main_BB__53_213 = 10'd213;
-parameter [9:0] LEGUP_F_main_BB__56_214 = 10'd214;
-parameter [9:0] LEGUP_F_main_BB__56_215 = 10'd215;
-parameter [9:0] LEGUP_F_main_BB__59_216 = 10'd216;
-parameter [9:0] LEGUP_F_main_BB__59_217 = 10'd217;
-parameter [9:0] LEGUP_F_main_BB__62_218 = 10'd218;
-parameter [9:0] LEGUP_F_main_BB__62_219 = 10'd219;
-parameter [9:0] LEGUP_F_main_BB__65_220 = 10'd220;
-parameter [9:0] LEGUP_F_main_BB__65_221 = 10'd221;
-parameter [9:0] LEGUP_F_main_BB__68_222 = 10'd222;
-parameter [9:0] LEGUP_F_main_BB__68_223 = 10'd223;
-parameter [9:0] LEGUP_F_main_BB__71_224 = 10'd224;
-parameter [9:0] LEGUP_F_main_BB__71_225 = 10'd225;
+parameter [9:0] LEGUP_F_main_BB_preheader2preheader_153 = 10'd153;
+parameter [9:0] LEGUP_F_main_BB_preheader2_154 = 10'd154;
+parameter [9:0] LEGUP_F_main_BB_preheader2_155 = 10'd155;
+parameter [9:0] LEGUP_F_main_BB_preheader2_156 = 10'd156;
+parameter [9:0] LEGUP_F_main_BB_preheader2_157 = 10'd157;
+parameter [9:0] LEGUP_F_main_BB_preheader2_158 = 10'd158;
+parameter [9:0] LEGUP_F_main_BB_preheader2_159 = 10'd159;
+parameter [9:0] LEGUP_F_main_BB_preheader2_160 = 10'd160;
+parameter [9:0] LEGUP_F_main_BB_preheader2_161 = 10'd161;
+parameter [9:0] LEGUP_F_main_BB_preheader2_162 = 10'd162;
+parameter [9:0] LEGUP_F_main_BB_preheader2_163 = 10'd163;
+parameter [9:0] LEGUP_F_main_BB_preheader2_164 = 10'd164;
+parameter [9:0] LEGUP_F_main_BB_preheader2_165 = 10'd165;
+parameter [9:0] LEGUP_F_main_BB_preheader2_166 = 10'd166;
+parameter [9:0] LEGUP_F_main_BB_preheader2_167 = 10'd167;
+parameter [9:0] LEGUP_F_main_BB_preheader2_168 = 10'd168;
+parameter [9:0] LEGUP_F_main_BB_preheader2_169 = 10'd169;
+parameter [9:0] LEGUP_F_main_BB_preheader2_170 = 10'd170;
+parameter [9:0] LEGUP_F_main_BB_preheader2_171 = 10'd171;
+parameter [9:0] LEGUP_F_main_BB_preheader2_172 = 10'd172;
+parameter [9:0] LEGUP_F_main_BB_preheader2_173 = 10'd173;
+parameter [9:0] LEGUP_F_main_BB_preheader2_174 = 10'd174;
+parameter [9:0] LEGUP_F_main_BB_preheader2_175 = 10'd175;
+parameter [9:0] LEGUP_F_main_BB_preheader2_176 = 10'd176;
+parameter [9:0] LEGUP_F_main_BB_preheader2_177 = 10'd177;
+parameter [9:0] LEGUP_F_main_BB_preheader2_178 = 10'd178;
+parameter [9:0] LEGUP_F_main_BB_preheader2_179 = 10'd179;
+parameter [9:0] LEGUP_F_main_BB_preheader2_180 = 10'd180;
+parameter [9:0] LEGUP_F_main_BB_preheader2_181 = 10'd181;
+parameter [9:0] LEGUP_F_main_BB_preheader2_182 = 10'd182;
+parameter [9:0] LEGUP_F_main_BB_preheader2_183 = 10'd183;
+parameter [9:0] LEGUP_F_main_BB_preheader2_184 = 10'd184;
+parameter [9:0] LEGUP_F_main_BB_preheader2_185 = 10'd185;
+parameter [9:0] LEGUP_F_main_BB_preheader2_186 = 10'd186;
+parameter [9:0] LEGUP_F_main_BB_preheader2_187 = 10'd187;
+parameter [9:0] LEGUP_F_main_BB_preheader2_188 = 10'd188;
+parameter [9:0] LEGUP_F_main_BB_preheader2_189 = 10'd189;
+parameter [9:0] LEGUP_F_main_BB_preheader2_190 = 10'd190;
+parameter [9:0] LEGUP_F_main_BB_preheader2_191 = 10'd191;
+parameter [9:0] LEGUP_F_main_BB_preheader2_192 = 10'd192;
+parameter [9:0] LEGUP_F_main_BB_preheader2_193 = 10'd193;
+parameter [9:0] LEGUP_F_main_BB_preheader2_194 = 10'd194;
+parameter [9:0] LEGUP_F_main_BB_preheader2_195 = 10'd195;
+parameter [9:0] LEGUP_F_main_BB_preheader2_196 = 10'd196;
+parameter [9:0] LEGUP_F_main_BB_preheader15iipreheader_197 = 10'd197;
+parameter [9:0] LEGUP_F_main_BB_preheader15ii_198 = 10'd198;
+parameter [9:0] LEGUP_F_main_BB_preheader15ii_199 = 10'd199;
+parameter [9:0] LEGUP_F_main_BB_preheader15ii_200 = 10'd200;
+parameter [9:0] LEGUP_F_main_BB_preheader15ii_201 = 10'd201;
+parameter [9:0] LEGUP_F_main_BB__46_202 = 10'd202;
+parameter [9:0] LEGUP_F_main_BB__46_203 = 10'd203;
+parameter [9:0] LEGUP_F_main_BB__49_204 = 10'd204;
+parameter [9:0] LEGUP_F_main_BB__49_205 = 10'd205;
+parameter [9:0] LEGUP_F_main_BB__52_206 = 10'd206;
+parameter [9:0] LEGUP_F_main_BB__52_207 = 10'd207;
+parameter [9:0] LEGUP_F_main_BB__55_208 = 10'd208;
+parameter [9:0] LEGUP_F_main_BB__55_209 = 10'd209;
+parameter [9:0] LEGUP_F_main_BB__58_210 = 10'd210;
+parameter [9:0] LEGUP_F_main_BB__58_211 = 10'd211;
+parameter [9:0] LEGUP_F_main_BB__61_212 = 10'd212;
+parameter [9:0] LEGUP_F_main_BB__61_213 = 10'd213;
+parameter [9:0] LEGUP_F_main_BB__64_214 = 10'd214;
+parameter [9:0] LEGUP_F_main_BB__64_215 = 10'd215;
+parameter [9:0] LEGUP_F_main_BB__67_216 = 10'd216;
+parameter [9:0] LEGUP_F_main_BB__67_217 = 10'd217;
+parameter [9:0] LEGUP_F_main_BB__70_218 = 10'd218;
+parameter [9:0] LEGUP_F_main_BB__70_219 = 10'd219;
+parameter [9:0] LEGUP_F_main_BB__73_220 = 10'd220;
+parameter [9:0] LEGUP_F_main_BB__73_221 = 10'd221;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_222 = 10'd222;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_223 = 10'd223;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_224 = 10'd224;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_225 = 10'd225;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_226 = 10'd226;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_227 = 10'd227;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_228 = 10'd228;
@@ -726,40 +664,40 @@ parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_269 = 10'd269;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_270 = 10'd270;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_271 = 10'd271;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_272 = 10'd272;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_273 = 10'd273;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_274 = 10'd274;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_275 = 10'd275;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexitii_276 = 10'd276;
-parameter [9:0] LEGUP_F_main_BB_preheader5preheader_277 = 10'd277;
-parameter [9:0] LEGUP_F_main_BB_preheader_278 = 10'd278;
-parameter [9:0] LEGUP_F_main_BB_preheader_279 = 10'd279;
-parameter [9:0] LEGUP_F_main_BB_preheader_280 = 10'd280;
-parameter [9:0] LEGUP_F_main_BB_preheader_281 = 10'd281;
-parameter [9:0] LEGUP_F_main_BB__82_282 = 10'd282;
-parameter [9:0] LEGUP_F_main_BB__82_283 = 10'd283;
-parameter [9:0] LEGUP_F_main_BB__85_284 = 10'd284;
-parameter [9:0] LEGUP_F_main_BB__85_285 = 10'd285;
-parameter [9:0] LEGUP_F_main_BB__88_286 = 10'd286;
-parameter [9:0] LEGUP_F_main_BB__88_287 = 10'd287;
-parameter [9:0] LEGUP_F_main_BB__88_288 = 10'd288;
-parameter [9:0] LEGUP_F_main_BB__92_289 = 10'd289;
-parameter [9:0] LEGUP_F_main_BB__92_290 = 10'd290;
-parameter [9:0] LEGUP_F_main_BB__95_291 = 10'd291;
-parameter [9:0] LEGUP_F_main_BB__95_292 = 10'd292;
-parameter [9:0] LEGUP_F_main_BB__98_293 = 10'd293;
-parameter [9:0] LEGUP_F_main_BB__98_294 = 10'd294;
-parameter [9:0] LEGUP_F_main_BB__101_295 = 10'd295;
-parameter [9:0] LEGUP_F_main_BB__101_296 = 10'd296;
-parameter [9:0] LEGUP_F_main_BB__104_297 = 10'd297;
-parameter [9:0] LEGUP_F_main_BB__104_298 = 10'd298;
-parameter [9:0] LEGUP_F_main_BB__107_299 = 10'd299;
-parameter [9:0] LEGUP_F_main_BB__107_300 = 10'd300;
-parameter [9:0] LEGUP_F_main_BB__110_301 = 10'd301;
-parameter [9:0] LEGUP_F_main_BB__110_302 = 10'd302;
-parameter [9:0] LEGUP_F_main_BB__113_303 = 10'd303;
-parameter [9:0] LEGUP_F_main_BB__113_304 = 10'd304;
-parameter [9:0] LEGUP_F_main_BB__116_305 = 10'd305;
-parameter [9:0] LEGUP_F_main_BB__116_306 = 10'd306;
+parameter [9:0] LEGUP_F_main_BB_preheader1preheader_273 = 10'd273;
+parameter [9:0] LEGUP_F_main_BB_preheader_274 = 10'd274;
+parameter [9:0] LEGUP_F_main_BB_preheader_275 = 10'd275;
+parameter [9:0] LEGUP_F_main_BB_preheader_276 = 10'd276;
+parameter [9:0] LEGUP_F_main_BB_preheader_277 = 10'd277;
+parameter [9:0] LEGUP_F_main_BB__84_278 = 10'd278;
+parameter [9:0] LEGUP_F_main_BB__84_279 = 10'd279;
+parameter [9:0] LEGUP_F_main_BB__87_280 = 10'd280;
+parameter [9:0] LEGUP_F_main_BB__87_281 = 10'd281;
+parameter [9:0] LEGUP_F_main_BB__90_282 = 10'd282;
+parameter [9:0] LEGUP_F_main_BB__90_283 = 10'd283;
+parameter [9:0] LEGUP_F_main_BB__90_284 = 10'd284;
+parameter [9:0] LEGUP_F_main_BB__94_285 = 10'd285;
+parameter [9:0] LEGUP_F_main_BB__94_286 = 10'd286;
+parameter [9:0] LEGUP_F_main_BB__97_287 = 10'd287;
+parameter [9:0] LEGUP_F_main_BB__97_288 = 10'd288;
+parameter [9:0] LEGUP_F_main_BB__100_289 = 10'd289;
+parameter [9:0] LEGUP_F_main_BB__100_290 = 10'd290;
+parameter [9:0] LEGUP_F_main_BB__103_291 = 10'd291;
+parameter [9:0] LEGUP_F_main_BB__103_292 = 10'd292;
+parameter [9:0] LEGUP_F_main_BB__106_293 = 10'd293;
+parameter [9:0] LEGUP_F_main_BB__106_294 = 10'd294;
+parameter [9:0] LEGUP_F_main_BB__109_295 = 10'd295;
+parameter [9:0] LEGUP_F_main_BB__109_296 = 10'd296;
+parameter [9:0] LEGUP_F_main_BB__112_297 = 10'd297;
+parameter [9:0] LEGUP_F_main_BB__112_298 = 10'd298;
+parameter [9:0] LEGUP_F_main_BB__115_299 = 10'd299;
+parameter [9:0] LEGUP_F_main_BB__115_300 = 10'd300;
+parameter [9:0] LEGUP_F_main_BB__118_301 = 10'd301;
+parameter [9:0] LEGUP_F_main_BB__118_302 = 10'd302;
+parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_303 = 10'd303;
+parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_304 = 10'd304;
+parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_305 = 10'd305;
+parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_306 = 10'd306;
 parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_307 = 10'd307;
 parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_308 = 10'd308;
 parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_309 = 10'd309;
@@ -796,34 +734,34 @@ parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_339 = 10'd339;
 parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_340 = 10'd340;
 parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_341 = 10'd341;
 parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_342 = 10'd342;
-parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_343 = 10'd343;
-parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_344 = 10'd344;
-parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_345 = 10'd345;
-parameter [9:0] LEGUP_F_main_BB_linear_sech2exitii_346 = 10'd346;
-parameter [9:0] LEGUP_F_main_BB_preheader5_347 = 10'd347;
-parameter [9:0] LEGUP_F_main_BB_preheader5_348 = 10'd348;
-parameter [9:0] LEGUP_F_main_BB_preheader5_349 = 10'd349;
-parameter [9:0] LEGUP_F_main_BB_preheader5_350 = 10'd350;
-parameter [9:0] LEGUP_F_main_BB__127_351 = 10'd351;
-parameter [9:0] LEGUP_F_main_BB__127_352 = 10'd352;
-parameter [9:0] LEGUP_F_main_BB__130_353 = 10'd353;
-parameter [9:0] LEGUP_F_main_BB__130_354 = 10'd354;
-parameter [9:0] LEGUP_F_main_BB__133_355 = 10'd355;
-parameter [9:0] LEGUP_F_main_BB__133_356 = 10'd356;
-parameter [9:0] LEGUP_F_main_BB__136_357 = 10'd357;
-parameter [9:0] LEGUP_F_main_BB__136_358 = 10'd358;
-parameter [9:0] LEGUP_F_main_BB__139_359 = 10'd359;
-parameter [9:0] LEGUP_F_main_BB__139_360 = 10'd360;
-parameter [9:0] LEGUP_F_main_BB__142_361 = 10'd361;
-parameter [9:0] LEGUP_F_main_BB__142_362 = 10'd362;
-parameter [9:0] LEGUP_F_main_BB__145_363 = 10'd363;
-parameter [9:0] LEGUP_F_main_BB__145_364 = 10'd364;
-parameter [9:0] LEGUP_F_main_BB__148_365 = 10'd365;
-parameter [9:0] LEGUP_F_main_BB__148_366 = 10'd366;
-parameter [9:0] LEGUP_F_main_BB__151_367 = 10'd367;
-parameter [9:0] LEGUP_F_main_BB__151_368 = 10'd368;
-parameter [9:0] LEGUP_F_main_BB__154_369 = 10'd369;
-parameter [9:0] LEGUP_F_main_BB__154_370 = 10'd370;
+parameter [9:0] LEGUP_F_main_BB_preheader1_343 = 10'd343;
+parameter [9:0] LEGUP_F_main_BB_preheader1_344 = 10'd344;
+parameter [9:0] LEGUP_F_main_BB_preheader1_345 = 10'd345;
+parameter [9:0] LEGUP_F_main_BB_preheader1_346 = 10'd346;
+parameter [9:0] LEGUP_F_main_BB__129_347 = 10'd347;
+parameter [9:0] LEGUP_F_main_BB__129_348 = 10'd348;
+parameter [9:0] LEGUP_F_main_BB__132_349 = 10'd349;
+parameter [9:0] LEGUP_F_main_BB__132_350 = 10'd350;
+parameter [9:0] LEGUP_F_main_BB__135_351 = 10'd351;
+parameter [9:0] LEGUP_F_main_BB__135_352 = 10'd352;
+parameter [9:0] LEGUP_F_main_BB__138_353 = 10'd353;
+parameter [9:0] LEGUP_F_main_BB__138_354 = 10'd354;
+parameter [9:0] LEGUP_F_main_BB__141_355 = 10'd355;
+parameter [9:0] LEGUP_F_main_BB__141_356 = 10'd356;
+parameter [9:0] LEGUP_F_main_BB__144_357 = 10'd357;
+parameter [9:0] LEGUP_F_main_BB__144_358 = 10'd358;
+parameter [9:0] LEGUP_F_main_BB__147_359 = 10'd359;
+parameter [9:0] LEGUP_F_main_BB__147_360 = 10'd360;
+parameter [9:0] LEGUP_F_main_BB__150_361 = 10'd361;
+parameter [9:0] LEGUP_F_main_BB__150_362 = 10'd362;
+parameter [9:0] LEGUP_F_main_BB__153_363 = 10'd363;
+parameter [9:0] LEGUP_F_main_BB__153_364 = 10'd364;
+parameter [9:0] LEGUP_F_main_BB__156_365 = 10'd365;
+parameter [9:0] LEGUP_F_main_BB__156_366 = 10'd366;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_367 = 10'd367;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_368 = 10'd368;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_369 = 10'd369;
+parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_370 = 10'd370;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_371 = 10'd371;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_372 = 10'd372;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_373 = 10'd373;
@@ -871,11 +809,11 @@ parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_414 = 10'd414;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_415 = 10'd415;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_416 = 10'd416;
 parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_417 = 10'd417;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_418 = 10'd418;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_419 = 10'd419;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_420 = 10'd420;
-parameter [9:0] LEGUP_F_main_BB_linear_tanhexit1ii_421 = 10'd421;
-parameter [9:0] LEGUP_F_main_BB_preheaderpreheader_422 = 10'd422;
+parameter [9:0] LEGUP_F_main_BB_preheaderpreheader_418 = 10'd418;
+parameter [9:0] LEGUP_F_main_BB_rotateexiti_419 = 10'd419;
+parameter [9:0] LEGUP_F_main_BB_rotateexiti_420 = 10'd420;
+parameter [9:0] LEGUP_F_main_BB_rotateexiti_421 = 10'd421;
+parameter [9:0] LEGUP_F_main_BB_rotateexiti_422 = 10'd422;
 parameter [9:0] LEGUP_F_main_BB_rotateexiti_423 = 10'd423;
 parameter [9:0] LEGUP_F_main_BB_rotateexiti_424 = 10'd424;
 parameter [9:0] LEGUP_F_main_BB_rotateexiti_425 = 10'd425;
@@ -949,22 +887,22 @@ parameter [9:0] LEGUP_F_main_BB_rotateexiti_492 = 10'd492;
 parameter [9:0] LEGUP_F_main_BB_rotateexiti_493 = 10'd493;
 parameter [9:0] LEGUP_F_main_BB_rotateexiti_494 = 10'd494;
 parameter [9:0] LEGUP_F_main_BB_rotateexiti_495 = 10'd495;
-parameter [9:0] LEGUP_F_main_BB_rotateexiti_496 = 10'd496;
-parameter [9:0] LEGUP_F_main_BB_rotateexiti_497 = 10'd497;
-parameter [9:0] LEGUP_F_main_BB_rotateexiti_498 = 10'd498;
-parameter [9:0] LEGUP_F_main_BB_rotateexiti_499 = 10'd499;
-parameter [9:0] LEGUP_F_main_BB__175_500 = 10'd500;
-parameter [9:0] LEGUP_F_main_BB__175_501 = 10'd501;
-parameter [9:0] LEGUP_F_main_BB__178_502 = 10'd502;
-parameter [9:0] LEGUP_F_main_BB__178_503 = 10'd503;
-parameter [9:0] LEGUP_F_main_BB__181_504 = 10'd504;
-parameter [9:0] LEGUP_F_main_BB__181_505 = 10'd505;
-parameter [9:0] LEGUP_F_main_BB__184_506 = 10'd506;
-parameter [9:0] LEGUP_F_main_BB__184_507 = 10'd507;
-parameter [9:0] LEGUP_F_main_BB__187_508 = 10'd508;
-parameter [9:0] LEGUP_F_main_BB__187_509 = 10'd509;
-parameter [9:0] LEGUP_F_main_BB__190_510 = 10'd510;
-parameter [9:0] LEGUP_F_main_BB__190_511 = 10'd511;
+parameter [9:0] LEGUP_F_main_BB__178_496 = 10'd496;
+parameter [9:0] LEGUP_F_main_BB__178_497 = 10'd497;
+parameter [9:0] LEGUP_F_main_BB__181_498 = 10'd498;
+parameter [9:0] LEGUP_F_main_BB__181_499 = 10'd499;
+parameter [9:0] LEGUP_F_main_BB__184_500 = 10'd500;
+parameter [9:0] LEGUP_F_main_BB__184_501 = 10'd501;
+parameter [9:0] LEGUP_F_main_BB__187_502 = 10'd502;
+parameter [9:0] LEGUP_F_main_BB__187_503 = 10'd503;
+parameter [9:0] LEGUP_F_main_BB__190_504 = 10'd504;
+parameter [9:0] LEGUP_F_main_BB__190_505 = 10'd505;
+parameter [9:0] LEGUP_F_main_BB__193_506 = 10'd506;
+parameter [9:0] LEGUP_F_main_BB__193_507 = 10'd507;
+parameter [9:0] LEGUP_F_main_BB_normalizeexiti_508 = 10'd508;
+parameter [9:0] LEGUP_F_main_BB_normalizeexiti_509 = 10'd509;
+parameter [9:0] LEGUP_F_main_BB_normalizeexiti_510 = 10'd510;
+parameter [9:0] LEGUP_F_main_BB_normalizeexiti_511 = 10'd511;
 parameter [9:0] LEGUP_F_main_BB_normalizeexiti_512 = 10'd512;
 parameter [9:0] LEGUP_F_main_BB_normalizeexiti_513 = 10'd513;
 parameter [9:0] LEGUP_F_main_BB_normalizeexiti_514 = 10'd514;
@@ -999,15 +937,7 @@ parameter [9:0] LEGUP_F_main_BB_normalizeexiti_542 = 10'd542;
 parameter [9:0] LEGUP_F_main_BB_normalizeexiti_543 = 10'd543;
 parameter [9:0] LEGUP_F_main_BB_normalizeexiti_544 = 10'd544;
 parameter [9:0] LEGUP_F_main_BB_normalizeexiti_545 = 10'd545;
-parameter [9:0] LEGUP_F_main_BB_normalizeexiti_546 = 10'd546;
-parameter [9:0] LEGUP_F_main_BB_normalizeexiti_547 = 10'd547;
-parameter [9:0] LEGUP_F_main_BB_normalizeexiti_548 = 10'd548;
-parameter [9:0] LEGUP_F_main_BB_normalizeexiti_549 = 10'd549;
-parameter [9:0] LEGUP_F_main_BB__198_550 = 10'd550;
-parameter [9:0] LEGUP_F_main_BB__198_551 = 10'd551;
-parameter [9:0] LEGUP_F_main_BB__198_552 = 10'd552;
-parameter [9:0] LEGUP_F_main_BB_fasticaexitloopexit_553 = 10'd553;
-parameter [9:0] LEGUP_F_main_BB_fasticaexit_554 = 10'd554;
+parameter [9:0] LEGUP_F_main_BB_fasticaexit_546 = 10'd546;
 parameter [8:0] tag_offset = 9'd0;
 parameter [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] tag_addr_offset = {tag_offset, 23'd0};
 
@@ -1033,16 +963,6 @@ input [`MEMORY_CONTROLLER_DATA_SIZE-1:0] memory_controller_out_b;
 output reg [31:0] return_val;
 reg [9:0] cur_state;
 reg [9:0] next_state;
-reg [31:0] main_0_pre;
-reg [31:0] main_0_pre8;
-reg [31:0] main_1_in;
-reg [31:0] main_1_in_reg;
-reg [31:0] main_1_in1;
-reg [31:0] main_1_in1_reg;
-reg [31:0] main_1_w_next10;
-reg [31:0] main_1_w_next10_reg;
-reg [31:0] main_1_w_next00;
-reg [31:0] main_1_w_next00_reg;
 reg [31:0] main_1_2;
 reg [31:0] main_1_2_reg;
 reg [31:0] main_1_3;
@@ -1053,519 +973,516 @@ reg [31:0] main_1_5;
 reg [31:0] main_1_5_reg;
 reg [31:0] main_1_6;
 reg [31:0] main_1_6_reg;
-reg  main_1_7;
-reg  main_1_7_reg;
-reg [31:0] main_8_9;
-reg [31:0] main_10_11;
-reg [31:0] main_10_11_reg;
-reg [31:0] main_10_12;
-reg  main_10_13;
+reg [31:0] main_1_7;
+reg [31:0] main_1_7_reg;
+reg [31:0] main_1_8;
+reg [31:0] main_1_8_reg;
+reg [31:0] main_1_9;
+reg [31:0] main_1_9_reg;
+reg [31:0] main_1_10;
+reg [31:0] main_1_10_reg;
+reg [31:0] main_1_11;
+reg [31:0] main_1_11_reg;
+reg  main_1_12;
+reg  main_1_12_reg;
+reg [31:0] main_13_14;
 reg [31:0] main_15_16;
-reg [31:0] main_17_18;
-reg [31:0] main_17_18_reg;
-reg [31:0] main_17_19;
-reg [31:0] main_21_22;
-reg [31:0] main_23_24;
-reg [31:0] main_23_24_reg;
-reg [31:0] main_23_25;
-reg [31:0] main_23_26;
-reg [31:0] main_23_26_reg;
-reg [31:0] main_convergedexiti_27;
-reg [31:0] main_convergedexiti_27_reg;
-reg [63:0] main_convergedexiti_28;
-reg  main_convergedexiti_29;
-reg [31:0] main_32_t025ii;
-reg [31:0] main_32_t025ii_reg;
-reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_32_scevgep;
-reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_32_scevgep1;
-reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_32_scevgep2;
-reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_32_scevgep2_reg;
-reg [31:0] main_32_33;
-reg [31:0] main_32_34;
-reg [31:0] main_32_35;
-reg [31:0] main_32_36;
-reg [31:0] main_32_36_reg;
-reg [31:0] main_32_37;
-reg [31:0] main_32_37_reg;
-reg [31:0] main_32_38;
-reg [31:0] main_32_39;
-reg [31:0] main_32_39_reg;
-reg  main_32_exitcond;
-reg  main_32_exitcond_reg;
-reg [31:0] main_preheader15ii_40;
-reg [31:0] main_preheader15ii_40_reg;
+reg [31:0] main_15_16_reg;
+reg [31:0] main_15_17;
+reg  main_15_18;
+reg [31:0] main_20_21;
+reg [31:0] main_22_23;
+reg [31:0] main_22_23_reg;
+reg [31:0] main_22_24;
+reg [31:0] main_26_27;
+reg [31:0] main_28_29;
+reg [31:0] main_28_29_reg;
+reg [31:0] main_28_30;
+reg [31:0] main_28_31;
+reg [31:0] main_28_31_reg;
+reg [31:0] main_convergedexiti_32;
+reg [31:0] main_convergedexiti_32_reg;
+reg [63:0] main_convergedexiti_33;
+reg [63:0] main_convergedexiti_33_reg;
+reg  main_convergedexiti_34;
+reg [31:0] main_preheader2_t025ii;
+reg [31:0] main_preheader2_t025ii_reg;
+reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader2_scevgep;
+reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader2_scevgep1;
+reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader2_scevgep2;
+reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader2_scevgep2_reg;
+reg [31:0] main_preheader2_35;
+reg [31:0] main_preheader2_36;
+reg [31:0] main_preheader2_37;
+reg [31:0] main_preheader2_38;
+reg [31:0] main_preheader2_38_reg;
+reg [31:0] main_preheader2_39;
+reg [31:0] main_preheader2_39_reg;
+reg [31:0] main_preheader2_40;
+reg [31:0] main_preheader2_41;
+reg [31:0] main_preheader2_41_reg;
+reg  main_preheader2_exitcond;
+reg  main_preheader2_exitcond_reg;
+reg [31:0] main_preheader15ii_42;
+reg [31:0] main_preheader15ii_42_reg;
 reg [31:0] main_preheader15ii_t119ii;
 reg [31:0] main_preheader15ii_t119ii_reg;
 reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader15ii_scevgep4;
 reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader15ii_scevgep5;
-reg [31:0] main_preheader15ii_41;
-reg [31:0] main_preheader15ii_41_reg;
-reg [31:0] main_preheader15ii_42;
-reg [31:0] main_preheader15ii_42_reg;
-reg  main_preheader15ii_43;
-reg  main_44_45;
-reg  main_44_46;
-reg  main_44_orcondiii;
-reg  main_47_48;
-reg  main_47_49;
-reg  main_47_orcond12iii;
-reg  main_50_51;
-reg  main_50_52;
-reg  main_50_orcond3iii;
-reg  main_53_54;
-reg  main_53_55;
-reg  main_53_orcond13iii;
-reg  main_56_57;
-reg  main_56_58;
-reg  main_56_orcond5iii;
-reg  main_59_60;
-reg  main_59_61;
-reg  main_59_orcond14iii;
-reg  main_62_63;
-reg  main_62_64;
-reg  main_62_orcond7iii;
-reg  main_65_66;
-reg  main_65_67;
-reg  main_65_orcond15iii;
-reg  main_68_69;
-reg  main_68_70;
-reg  main_68_orcond9iii;
-reg  main_71_72;
-reg  main_71_73;
-reg  main_71_orcond11iii;
-reg [31:0] main_71_iii;
-reg [31:0] main_71_16iii;
+reg [31:0] main_preheader15ii_43;
+reg [31:0] main_preheader15ii_43_reg;
+reg [31:0] main_preheader15ii_44;
+reg [31:0] main_preheader15ii_44_reg;
+reg  main_preheader15ii_45;
+reg  main_46_47;
+reg  main_46_48;
+reg  main_46_orcondiii;
+reg  main_49_50;
+reg  main_49_51;
+reg  main_49_orcond12iii;
+reg  main_52_53;
+reg  main_52_54;
+reg  main_52_orcond3iii;
+reg  main_55_56;
+reg  main_55_57;
+reg  main_55_orcond13iii;
+reg  main_58_59;
+reg  main_58_60;
+reg  main_58_orcond5iii;
+reg  main_61_62;
+reg  main_61_63;
+reg  main_61_orcond14iii;
+reg  main_64_65;
+reg  main_64_66;
+reg  main_64_orcond7iii;
+reg  main_67_68;
+reg  main_67_69;
+reg  main_67_orcond15iii;
+reg  main_70_71;
+reg  main_70_72;
+reg  main_70_orcond9iii;
+reg  main_73_74;
+reg  main_73_75;
+reg  main_73_orcond11iii;
+reg [31:0] main_73_iii;
+reg [31:0] main_73_16iii;
 reg [31:0] main_linear_tanhexitii_a0iii;
 reg [31:0] main_linear_tanhexitii_a0iii_reg;
 reg [31:0] main_linear_tanhexitii_b0iii;
 reg [31:0] main_linear_tanhexitii_b0iii_reg;
-reg [31:0] main_linear_tanhexitii_74;
-reg [31:0] main_linear_tanhexitii_75;
 reg [31:0] main_linear_tanhexitii_76;
 reg [31:0] main_linear_tanhexitii_77;
-reg [31:0] main_linear_tanhexitii_77_reg;
 reg [31:0] main_linear_tanhexitii_78;
-reg [31:0] main_linear_tanhexitii_78_reg;
+reg [31:0] main_linear_tanhexitii_79;
+reg [31:0] main_linear_tanhexitii_79_reg;
+reg [31:0] main_linear_tanhexitii_80;
+reg [31:0] main_linear_tanhexitii_80_reg;
 reg  main_linear_tanhexitii_exitcond3;
 reg  main_linear_tanhexitii_exitcond3_reg;
-reg [31:0] main_preheader_79;
-reg [31:0] main_preheader_79_reg;
+reg [31:0] main_preheader_81;
+reg [31:0] main_preheader_81_reg;
 reg [31:0] main_preheader_t218ii;
 reg [31:0] main_preheader_t218ii_reg;
 reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader_scevgep10;
-reg [31:0] main_preheader_80;
-reg [31:0] main_preheader_80_reg;
-reg  main_preheader_81;
-reg  main_82_83;
-reg  main_82_84;
-reg  main_82_orcondi1ii;
-reg  main_85_86;
-reg  main_85_87;
-reg  main_85_orcond12i2ii;
-reg [63:0] main_88_89;
-reg [63:0] main_88_89_reg;
-reg  main_88_90;
-reg  main_88_91;
-reg  main_88_orcond3i3ii;
-reg  main_88_orcond3i3ii_reg;
-reg  main_92_93;
-reg  main_92_94;
-reg  main_92_orcond13i4ii;
-reg  main_95_96;
-reg  main_95_97;
-reg  main_95_orcond14i5ii;
-reg  main_98_99;
-reg  main_98_100;
-reg  main_98_orcond5i6ii;
-reg  main_101_102;
-reg  main_101_103;
-reg  main_101_orcond15i7ii;
-reg  main_104_105;
-reg  main_104_106;
-reg  main_104_orcond16iii;
-reg  main_107_108;
-reg  main_107_109;
-reg  main_107_orcond7i8ii;
-reg  main_110_111;
-reg  main_110_112;
-reg  main_110_orcond17iii;
-reg  main_113_114;
-reg  main_113_115;
-reg  main_113_orcond9i9ii;
-reg  main_116_117;
-reg  main_116_118;
-reg  main_116_orcond11i10ii;
-reg [31:0] main_116_i11ii;
-reg [31:0] main_116_18iii;
+reg [31:0] main_preheader_82;
+reg [31:0] main_preheader_82_reg;
+reg  main_preheader_83;
+reg  main_84_85;
+reg  main_84_86;
+reg  main_84_orcondi1ii;
+reg  main_87_88;
+reg  main_87_89;
+reg  main_87_orcond12i2ii;
+reg [63:0] main_90_91;
+reg [63:0] main_90_91_reg;
+reg  main_90_92;
+reg  main_90_93;
+reg  main_90_orcond3i3ii;
+reg  main_90_orcond3i3ii_reg;
+reg  main_94_95;
+reg  main_94_96;
+reg  main_94_orcond13i4ii;
+reg  main_97_98;
+reg  main_97_99;
+reg  main_97_orcond14i5ii;
+reg  main_100_101;
+reg  main_100_102;
+reg  main_100_orcond5i6ii;
+reg  main_103_104;
+reg  main_103_105;
+reg  main_103_orcond15i7ii;
+reg  main_106_107;
+reg  main_106_108;
+reg  main_106_orcond16iii;
+reg  main_109_110;
+reg  main_109_111;
+reg  main_109_orcond7i8ii;
+reg  main_112_113;
+reg  main_112_114;
+reg  main_112_orcond17iii;
+reg  main_115_116;
+reg  main_115_117;
+reg  main_115_orcond9i9ii;
+reg  main_118_119;
+reg  main_118_120;
+reg  main_118_orcond11i10ii;
+reg [31:0] main_118_i11ii;
+reg [31:0] main_118_18iii;
 reg [31:0] main_linear_sech2exitii_a0i12ii;
 reg [31:0] main_linear_sech2exitii_a0i12ii_reg;
 reg [31:0] main_linear_sech2exitii_b0i13ii;
 reg [31:0] main_linear_sech2exitii_b0i13ii_reg;
-reg [31:0] main_linear_sech2exitii_119;
-reg [31:0] main_linear_sech2exitii_120;
 reg [31:0] main_linear_sech2exitii_121;
-reg [31:0] main_linear_sech2exitii_121_reg;
 reg [31:0] main_linear_sech2exitii_122;
-reg [31:0] main_linear_sech2exitii_122_reg;
+reg [31:0] main_linear_sech2exitii_123;
+reg [31:0] main_linear_sech2exitii_123_reg;
+reg [31:0] main_linear_sech2exitii_124;
+reg [31:0] main_linear_sech2exitii_124_reg;
 reg  main_linear_sech2exitii_exitcond9;
 reg  main_linear_sech2exitii_exitcond9_reg;
-reg [31:0] main_preheader5_123;
-reg [31:0] main_preheader5_123_reg;
-reg [31:0] main_preheader5_t1191ii;
-reg [31:0] main_preheader5_t1191ii_reg;
-reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader5_scevgep7;
-reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader5_scevgep8;
-reg [31:0] main_preheader5_124;
-reg [31:0] main_preheader5_124_reg;
-reg [31:0] main_preheader5_125;
-reg [31:0] main_preheader5_125_reg;
-reg  main_preheader5_126;
-reg  main_127_128;
-reg  main_127_129;
-reg  main_127_orcondi1ii;
-reg  main_130_131;
-reg  main_130_132;
-reg  main_130_orcond12i1ii;
-reg  main_133_134;
-reg  main_133_135;
-reg  main_133_orcond3i1ii;
-reg  main_136_137;
-reg  main_136_138;
-reg  main_136_orcond13i1ii;
-reg  main_139_140;
-reg  main_139_141;
-reg  main_139_orcond5i1ii;
-reg  main_142_143;
-reg  main_142_144;
-reg  main_142_orcond14i1ii;
-reg  main_145_146;
-reg  main_145_147;
-reg  main_145_orcond7i1ii;
-reg  main_148_149;
-reg  main_148_150;
-reg  main_148_orcond15i1ii;
-reg  main_151_152;
-reg  main_151_153;
-reg  main_151_orcond9i1ii;
-reg  main_154_155;
-reg  main_154_156;
-reg  main_154_orcond11i1ii;
-reg [31:0] main_154_i1ii;
-reg [31:0] main_154_16i1ii;
+reg [31:0] main_preheader1_125;
+reg [31:0] main_preheader1_125_reg;
+reg [31:0] main_preheader1_t1191ii;
+reg [31:0] main_preheader1_t1191ii_reg;
+reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader1_scevgep7;
+reg [`MEMORY_CONTROLLER_ADDR_SIZE-1:0] main_preheader1_scevgep8;
+reg [31:0] main_preheader1_126;
+reg [31:0] main_preheader1_126_reg;
+reg [31:0] main_preheader1_127;
+reg [31:0] main_preheader1_127_reg;
+reg  main_preheader1_128;
+reg  main_129_130;
+reg  main_129_131;
+reg  main_129_orcondi1ii;
+reg  main_132_133;
+reg  main_132_134;
+reg  main_132_orcond12i1ii;
+reg  main_135_136;
+reg  main_135_137;
+reg  main_135_orcond3i1ii;
+reg  main_138_139;
+reg  main_138_140;
+reg  main_138_orcond13i1ii;
+reg  main_141_142;
+reg  main_141_143;
+reg  main_141_orcond5i1ii;
+reg  main_144_145;
+reg  main_144_146;
+reg  main_144_orcond14i1ii;
+reg  main_147_148;
+reg  main_147_149;
+reg  main_147_orcond7i1ii;
+reg  main_150_151;
+reg  main_150_152;
+reg  main_150_orcond15i1ii;
+reg  main_153_154;
+reg  main_153_155;
+reg  main_153_orcond9i1ii;
+reg  main_156_157;
+reg  main_156_158;
+reg  main_156_orcond11i1ii;
+reg [31:0] main_156_i1ii;
+reg [31:0] main_156_16i1ii;
 reg [31:0] main_linear_tanhexit1ii_a0i1ii;
 reg [31:0] main_linear_tanhexit1ii_a0i1ii_reg;
 reg [31:0] main_linear_tanhexit1ii_b0i1ii;
 reg [31:0] main_linear_tanhexit1ii_b0i1ii_reg;
-reg [31:0] main_linear_tanhexit1ii_157;
-reg [31:0] main_linear_tanhexit1ii_158;
 reg [31:0] main_linear_tanhexit1ii_159;
 reg [31:0] main_linear_tanhexit1ii_160;
-reg [31:0] main_linear_tanhexit1ii_160_reg;
 reg [31:0] main_linear_tanhexit1ii_161;
-reg [31:0] main_linear_tanhexit1ii_161_reg;
+reg [31:0] main_linear_tanhexit1ii_162;
+reg [31:0] main_linear_tanhexit1ii_162_reg;
+reg [31:0] main_linear_tanhexit1ii_163;
+reg [31:0] main_linear_tanhexit1ii_163_reg;
 reg  main_linear_tanhexit1ii_exitcond6;
 reg  main_linear_tanhexit1ii_exitcond6_reg;
-reg [31:0] main_rotateexiti_162;
-reg [31:0] main_rotateexiti_162_reg;
-reg [31:0] main_rotateexiti_163;
 reg [31:0] main_rotateexiti_164;
+reg [31:0] main_rotateexiti_164_reg;
 reg [31:0] main_rotateexiti_165;
+reg [31:0] main_rotateexiti_165_reg;
 reg [31:0] main_rotateexiti_166;
-reg [31:0] main_rotateexiti_166_reg;
 reg [31:0] main_rotateexiti_167;
-reg [31:0] main_rotateexiti_167_reg;
 reg [31:0] main_rotateexiti_168;
-reg [31:0] main_rotateexiti_168_reg;
 reg [31:0] main_rotateexiti_169;
+reg [31:0] main_rotateexiti_169_reg;
 reg [31:0] main_rotateexiti_170;
+reg [31:0] main_rotateexiti_170_reg;
 reg [31:0] main_rotateexiti_171;
 reg [31:0] main_rotateexiti_171_reg;
 reg [31:0] main_rotateexiti_172;
-reg [31:0] main_rotateexiti_172_reg;
-reg  main_rotateexiti_173;
-reg  main_rotateexiti_174;
+reg [31:0] main_rotateexiti_173;
+reg [31:0] main_rotateexiti_174;
+reg [31:0] main_rotateexiti_174_reg;
+reg [31:0] main_rotateexiti_175;
+reg [31:0] main_rotateexiti_175_reg;
+reg  main_rotateexiti_176;
+reg  main_rotateexiti_177;
 reg  main_rotateexiti_orcondiiii;
-reg  main_175_176;
-reg  main_175_177;
-reg  main_175_orcond3iiii;
 reg  main_178_179;
 reg  main_178_180;
-reg  main_178_orcond5iiii;
+reg  main_178_orcond3iiii;
 reg  main_181_182;
 reg  main_181_183;
-reg  main_181_orcond7iiii;
+reg  main_181_orcond5iiii;
 reg  main_184_185;
 reg  main_184_186;
-reg  main_184_orcond9iiii;
+reg  main_184_orcond7iiii;
 reg  main_187_188;
 reg  main_187_189;
-reg  main_187_orcond11iiii;
+reg  main_187_orcond9iiii;
 reg  main_190_191;
 reg  main_190_192;
-reg  main_190_orcond13iiii;
-reg [31:0] main_190_iiii;
-reg [31:0] main_190_14iiii;
+reg  main_190_orcond11iiii;
+reg  main_193_194;
+reg  main_193_195;
+reg  main_193_orcond13iiii;
+reg [31:0] main_193_iiii;
+reg [31:0] main_193_14iiii;
 reg [31:0] main_normalizeexiti_a0iiii;
 reg [31:0] main_normalizeexiti_a0iiii_reg;
 reg [31:0] main_normalizeexiti_b0iiii;
 reg [31:0] main_normalizeexiti_b0iiii_reg;
-reg [31:0] main_normalizeexiti_193;
-reg [31:0] main_normalizeexiti_194;
-reg [31:0] main_normalizeexiti_194_reg;
-reg [31:0] main_normalizeexiti_195;
-reg [31:0] main_normalizeexiti_195_reg;
 reg [31:0] main_normalizeexiti_196;
-reg  main_normalizeexiti_197;
-reg  main_normalizeexiti_197_reg;
-reg [31:0] main_198_pre9;
-reg [31:0] main_198_pre10;
-reg [31:0] main_fasticaexitloopexit_200;
-reg [31:0] main_fasticaexitloopexit_201;
-reg [31:0] main_fasticaexit_202;
-reg [31:0] main_fasticaexit_202_reg;
-reg [31:0] main_fasticaexit_203;
-reg [31:0] main_fasticaexit_203_reg;
+reg [31:0] main_normalizeexiti_197;
+reg [31:0] main_normalizeexiti_197_reg;
+reg [31:0] main_normalizeexiti_198;
+reg [31:0] main_normalizeexiti_198_reg;
+reg [31:0] main_normalizeexiti_199;
 reg [31:0] main_altfp_multiply_32_0_op0;
 reg [31:0] main_altfp_multiply_32_0_op1;
-wire [31:0] altfp_multiplier_main_1_3_out;
-reg  altfp_main_1_3_en;
+wire [31:0] altfp_multiplier_main_1_8_out;
+reg  altfp_main_1_8_en;
 reg [31:0] main_altfp_multiply_32_0;
 reg [31:0] main_altfp_add_32_0_op0;
 reg [31:0] main_altfp_add_32_0_op1;
-wire [31:0] altfp_adder_main_1_4_out;
-reg  altfp_main_1_4_en;
+wire [31:0] altfp_adder_main_1_9_out;
+reg  altfp_main_1_9_en;
 reg [31:0] main_altfp_add_32_0;
 reg [31:0] main_altfp_subtract_32_0_op0;
 reg [31:0] main_altfp_subtract_32_0_op1;
-wire [31:0] altfp_subtractor_main_8_9_out;
-reg  altfp_main_8_9_en;
+wire [31:0] altfp_subtractor_main_13_14_out;
+reg  altfp_main_13_14_en;
 reg [31:0] main_altfp_subtract_32_0;
 reg [31:0] main_altfp_extend_32_0_op0;
-wire [63:0] altfp_extend_main_88_89_out;
-reg  altfp_main_88_89_en;
+wire [63:0] altfp_extend_main_convergedexiti_33_out;
+reg  altfp_main_convergedexiti_33_en;
 reg [63:0] main_altfp_extend_32_0;
-wire  altfp_compare32_1_main_1_7_out;
-reg  altfp_main_1_7_en;
-wire  main_1_7_unused;
-wire  altfp_compare32_1_main_10_13_out;
-reg  altfp_main_10_13_en;
-wire  main_10_13_unused;
-wire  altfp_compare64_1_main_convergedexiti_29_out;
-reg  altfp_main_convergedexiti_29_en;
-wire  main_convergedexiti_29_unused;
-wire  altfp_compare32_1_main_preheader15ii_43_out;
-reg  altfp_main_preheader15ii_43_en;
-wire  main_preheader15ii_43_unused;
-wire  altfp_compare32_1_main_44_45_out;
-reg  altfp_main_44_45_en;
-wire  main_44_45_unused;
-wire  altfp_compare32_1_main_44_46_out;
-reg  altfp_main_44_46_en;
-wire  main_44_46_unused;
-wire  altfp_compare32_1_main_47_48_out;
-reg  altfp_main_47_48_en;
-wire  main_47_48_unused;
-wire  altfp_compare32_1_main_47_49_out;
-reg  altfp_main_47_49_en;
-wire  main_47_49_unused;
-wire  altfp_compare32_1_main_50_51_out;
-reg  altfp_main_50_51_en;
-wire  main_50_51_unused;
-wire  altfp_compare32_1_main_50_52_out;
-reg  altfp_main_50_52_en;
-wire  main_50_52_unused;
-wire  altfp_compare32_1_main_53_54_out;
-reg  altfp_main_53_54_en;
-wire  main_53_54_unused;
-wire  altfp_compare32_1_main_53_55_out;
-reg  altfp_main_53_55_en;
-wire  main_53_55_unused;
-wire  altfp_compare32_1_main_56_57_out;
-reg  altfp_main_56_57_en;
-wire  main_56_57_unused;
-wire  altfp_compare32_1_main_56_58_out;
-reg  altfp_main_56_58_en;
-wire  main_56_58_unused;
-wire  altfp_compare32_1_main_59_60_out;
-reg  altfp_main_59_60_en;
-wire  main_59_60_unused;
-wire  altfp_compare32_1_main_59_61_out;
-reg  altfp_main_59_61_en;
-wire  main_59_61_unused;
-wire  altfp_compare32_1_main_62_63_out;
-reg  altfp_main_62_63_en;
-wire  main_62_63_unused;
-wire  altfp_compare32_1_main_62_64_out;
-reg  altfp_main_62_64_en;
-wire  main_62_64_unused;
-wire  altfp_compare32_1_main_65_66_out;
-reg  altfp_main_65_66_en;
-wire  main_65_66_unused;
-wire  altfp_compare32_1_main_65_67_out;
-reg  altfp_main_65_67_en;
-wire  main_65_67_unused;
-wire  altfp_compare32_1_main_68_69_out;
-reg  altfp_main_68_69_en;
-wire  main_68_69_unused;
-wire  altfp_compare32_1_main_68_70_out;
-reg  altfp_main_68_70_en;
-wire  main_68_70_unused;
-wire  altfp_compare32_1_main_71_72_out;
-reg  altfp_main_71_72_en;
-wire  main_71_72_unused;
-wire  altfp_compare32_1_main_71_73_out;
-reg  altfp_main_71_73_en;
-wire  main_71_73_unused;
-wire  altfp_compare32_1_main_preheader_81_out;
-reg  altfp_main_preheader_81_en;
-wire  main_preheader_81_unused;
-wire  altfp_compare32_1_main_82_83_out;
-reg  altfp_main_82_83_en;
-wire  main_82_83_unused;
-wire  altfp_compare32_1_main_82_84_out;
-reg  altfp_main_82_84_en;
-wire  main_82_84_unused;
-wire  altfp_compare32_1_main_85_86_out;
-reg  altfp_main_85_86_en;
-wire  main_85_86_unused;
-wire  altfp_compare32_1_main_85_87_out;
-reg  altfp_main_85_87_en;
-wire  main_85_87_unused;
-wire  altfp_compare32_1_main_88_90_out;
-reg  altfp_main_88_90_en;
-wire  main_88_90_unused;
-wire  altfp_compare32_1_main_88_91_out;
-reg  altfp_main_88_91_en;
-wire  main_88_91_unused;
-wire  altfp_compare32_1_main_92_93_out;
-reg  altfp_main_92_93_en;
-wire  main_92_93_unused;
-wire  altfp_compare32_1_main_92_94_out;
-reg  altfp_main_92_94_en;
-wire  main_92_94_unused;
-wire  altfp_compare32_1_main_95_96_out;
-reg  altfp_main_95_96_en;
-wire  main_95_96_unused;
-wire  altfp_compare64_1_main_95_97_out;
-reg  altfp_main_95_97_en;
-wire  main_95_97_unused;
-wire  altfp_compare64_1_main_98_99_out;
-reg  altfp_main_98_99_en;
-wire  main_98_99_unused;
-wire  altfp_compare32_1_main_98_100_out;
-reg  altfp_main_98_100_en;
-wire  main_98_100_unused;
-wire  altfp_compare32_1_main_101_102_out;
-reg  altfp_main_101_102_en;
-wire  main_101_102_unused;
-wire  altfp_compare64_1_main_101_103_out;
-reg  altfp_main_101_103_en;
-wire  main_101_103_unused;
-wire  altfp_compare64_1_main_104_105_out;
-reg  altfp_main_104_105_en;
-wire  main_104_105_unused;
-wire  altfp_compare32_1_main_104_106_out;
-reg  altfp_main_104_106_en;
-wire  main_104_106_unused;
-wire  altfp_compare32_1_main_107_108_out;
-reg  altfp_main_107_108_en;
-wire  main_107_108_unused;
-wire  altfp_compare32_1_main_107_109_out;
-reg  altfp_main_107_109_en;
-wire  main_107_109_unused;
-wire  altfp_compare32_1_main_110_111_out;
-reg  altfp_main_110_111_en;
-wire  main_110_111_unused;
-wire  altfp_compare32_1_main_110_112_out;
-reg  altfp_main_110_112_en;
-wire  main_110_112_unused;
-wire  altfp_compare32_1_main_113_114_out;
-reg  altfp_main_113_114_en;
-wire  main_113_114_unused;
-wire  altfp_compare32_1_main_113_115_out;
-reg  altfp_main_113_115_en;
-wire  main_113_115_unused;
-wire  altfp_compare32_1_main_116_117_out;
-reg  altfp_main_116_117_en;
-wire  main_116_117_unused;
-wire  altfp_compare32_1_main_116_118_out;
-reg  altfp_main_116_118_en;
-wire  main_116_118_unused;
-wire  altfp_compare32_1_main_preheader5_126_out;
-reg  altfp_main_preheader5_126_en;
-wire  main_preheader5_126_unused;
-wire  altfp_compare32_1_main_127_128_out;
-reg  altfp_main_127_128_en;
-wire  main_127_128_unused;
-wire  altfp_compare32_1_main_127_129_out;
-reg  altfp_main_127_129_en;
-wire  main_127_129_unused;
-wire  altfp_compare32_1_main_130_131_out;
-reg  altfp_main_130_131_en;
-wire  main_130_131_unused;
-wire  altfp_compare32_1_main_130_132_out;
-reg  altfp_main_130_132_en;
-wire  main_130_132_unused;
-wire  altfp_compare32_1_main_133_134_out;
-reg  altfp_main_133_134_en;
-wire  main_133_134_unused;
-wire  altfp_compare32_1_main_133_135_out;
-reg  altfp_main_133_135_en;
-wire  main_133_135_unused;
-wire  altfp_compare32_1_main_136_137_out;
-reg  altfp_main_136_137_en;
-wire  main_136_137_unused;
-wire  altfp_compare32_1_main_136_138_out;
-reg  altfp_main_136_138_en;
-wire  main_136_138_unused;
-wire  altfp_compare32_1_main_139_140_out;
-reg  altfp_main_139_140_en;
-wire  main_139_140_unused;
-wire  altfp_compare32_1_main_139_141_out;
-reg  altfp_main_139_141_en;
-wire  main_139_141_unused;
-wire  altfp_compare32_1_main_142_143_out;
-reg  altfp_main_142_143_en;
-wire  main_142_143_unused;
-wire  altfp_compare32_1_main_142_144_out;
-reg  altfp_main_142_144_en;
-wire  main_142_144_unused;
-wire  altfp_compare32_1_main_145_146_out;
-reg  altfp_main_145_146_en;
-wire  main_145_146_unused;
-wire  altfp_compare32_1_main_145_147_out;
-reg  altfp_main_145_147_en;
-wire  main_145_147_unused;
-wire  altfp_compare32_1_main_148_149_out;
-reg  altfp_main_148_149_en;
-wire  main_148_149_unused;
-wire  altfp_compare32_1_main_148_150_out;
-reg  altfp_main_148_150_en;
-wire  main_148_150_unused;
-wire  altfp_compare32_1_main_151_152_out;
-reg  altfp_main_151_152_en;
-wire  main_151_152_unused;
-wire  altfp_compare32_1_main_151_153_out;
-reg  altfp_main_151_153_en;
-wire  main_151_153_unused;
-wire  altfp_compare32_1_main_154_155_out;
-reg  altfp_main_154_155_en;
-wire  main_154_155_unused;
-wire  altfp_compare32_1_main_154_156_out;
-reg  altfp_main_154_156_en;
-wire  main_154_156_unused;
-wire  altfp_compare32_1_main_rotateexiti_173_out;
-reg  altfp_main_rotateexiti_173_en;
-wire  main_rotateexiti_173_unused;
-wire  altfp_compare32_1_main_rotateexiti_174_out;
-reg  altfp_main_rotateexiti_174_en;
-wire  main_rotateexiti_174_unused;
-wire  altfp_compare32_1_main_175_176_out;
-reg  altfp_main_175_176_en;
-wire  main_175_176_unused;
-wire  altfp_compare32_1_main_175_177_out;
-reg  altfp_main_175_177_en;
-wire  main_175_177_unused;
+wire  altfp_compare32_1_main_1_12_out;
+reg  altfp_main_1_12_en;
+wire  main_1_12_unused;
+wire  altfp_compare32_1_main_15_18_out;
+reg  altfp_main_15_18_en;
+wire  main_15_18_unused;
+wire  altfp_compare64_1_main_convergedexiti_34_out;
+reg  altfp_main_convergedexiti_34_en;
+wire  main_convergedexiti_34_unused;
+wire  altfp_compare32_1_main_preheader15ii_45_out;
+reg  altfp_main_preheader15ii_45_en;
+wire  main_preheader15ii_45_unused;
+wire  altfp_compare32_1_main_46_47_out;
+reg  altfp_main_46_47_en;
+wire  main_46_47_unused;
+wire  altfp_compare32_1_main_46_48_out;
+reg  altfp_main_46_48_en;
+wire  main_46_48_unused;
+wire  altfp_compare32_1_main_49_50_out;
+reg  altfp_main_49_50_en;
+wire  main_49_50_unused;
+wire  altfp_compare32_1_main_49_51_out;
+reg  altfp_main_49_51_en;
+wire  main_49_51_unused;
+wire  altfp_compare32_1_main_52_53_out;
+reg  altfp_main_52_53_en;
+wire  main_52_53_unused;
+wire  altfp_compare32_1_main_52_54_out;
+reg  altfp_main_52_54_en;
+wire  main_52_54_unused;
+wire  altfp_compare32_1_main_55_56_out;
+reg  altfp_main_55_56_en;
+wire  main_55_56_unused;
+wire  altfp_compare32_1_main_55_57_out;
+reg  altfp_main_55_57_en;
+wire  main_55_57_unused;
+wire  altfp_compare32_1_main_58_59_out;
+reg  altfp_main_58_59_en;
+wire  main_58_59_unused;
+wire  altfp_compare32_1_main_58_60_out;
+reg  altfp_main_58_60_en;
+wire  main_58_60_unused;
+wire  altfp_compare32_1_main_61_62_out;
+reg  altfp_main_61_62_en;
+wire  main_61_62_unused;
+wire  altfp_compare32_1_main_61_63_out;
+reg  altfp_main_61_63_en;
+wire  main_61_63_unused;
+wire  altfp_compare32_1_main_64_65_out;
+reg  altfp_main_64_65_en;
+wire  main_64_65_unused;
+wire  altfp_compare32_1_main_64_66_out;
+reg  altfp_main_64_66_en;
+wire  main_64_66_unused;
+wire  altfp_compare32_1_main_67_68_out;
+reg  altfp_main_67_68_en;
+wire  main_67_68_unused;
+wire  altfp_compare32_1_main_67_69_out;
+reg  altfp_main_67_69_en;
+wire  main_67_69_unused;
+wire  altfp_compare32_1_main_70_71_out;
+reg  altfp_main_70_71_en;
+wire  main_70_71_unused;
+wire  altfp_compare32_1_main_70_72_out;
+reg  altfp_main_70_72_en;
+wire  main_70_72_unused;
+wire  altfp_compare32_1_main_73_74_out;
+reg  altfp_main_73_74_en;
+wire  main_73_74_unused;
+wire  altfp_compare32_1_main_73_75_out;
+reg  altfp_main_73_75_en;
+wire  main_73_75_unused;
+wire  altfp_compare32_1_main_preheader_83_out;
+reg  altfp_main_preheader_83_en;
+wire  main_preheader_83_unused;
+wire  altfp_compare32_1_main_84_85_out;
+reg  altfp_main_84_85_en;
+wire  main_84_85_unused;
+wire  altfp_compare32_1_main_84_86_out;
+reg  altfp_main_84_86_en;
+wire  main_84_86_unused;
+wire  altfp_compare32_1_main_87_88_out;
+reg  altfp_main_87_88_en;
+wire  main_87_88_unused;
+wire  altfp_compare32_1_main_87_89_out;
+reg  altfp_main_87_89_en;
+wire  main_87_89_unused;
+wire  altfp_compare32_1_main_90_92_out;
+reg  altfp_main_90_92_en;
+wire  main_90_92_unused;
+wire  altfp_compare32_1_main_90_93_out;
+reg  altfp_main_90_93_en;
+wire  main_90_93_unused;
+wire  altfp_compare32_1_main_94_95_out;
+reg  altfp_main_94_95_en;
+wire  main_94_95_unused;
+wire  altfp_compare32_1_main_94_96_out;
+reg  altfp_main_94_96_en;
+wire  main_94_96_unused;
+wire  altfp_compare32_1_main_97_98_out;
+reg  altfp_main_97_98_en;
+wire  main_97_98_unused;
+wire  altfp_compare64_1_main_97_99_out;
+reg  altfp_main_97_99_en;
+wire  main_97_99_unused;
+wire  altfp_compare64_1_main_100_101_out;
+reg  altfp_main_100_101_en;
+wire  main_100_101_unused;
+wire  altfp_compare32_1_main_100_102_out;
+reg  altfp_main_100_102_en;
+wire  main_100_102_unused;
+wire  altfp_compare32_1_main_103_104_out;
+reg  altfp_main_103_104_en;
+wire  main_103_104_unused;
+wire  altfp_compare64_1_main_103_105_out;
+reg  altfp_main_103_105_en;
+wire  main_103_105_unused;
+wire  altfp_compare64_1_main_106_107_out;
+reg  altfp_main_106_107_en;
+wire  main_106_107_unused;
+wire  altfp_compare32_1_main_106_108_out;
+reg  altfp_main_106_108_en;
+wire  main_106_108_unused;
+wire  altfp_compare32_1_main_109_110_out;
+reg  altfp_main_109_110_en;
+wire  main_109_110_unused;
+wire  altfp_compare32_1_main_109_111_out;
+reg  altfp_main_109_111_en;
+wire  main_109_111_unused;
+wire  altfp_compare32_1_main_112_113_out;
+reg  altfp_main_112_113_en;
+wire  main_112_113_unused;
+wire  altfp_compare32_1_main_112_114_out;
+reg  altfp_main_112_114_en;
+wire  main_112_114_unused;
+wire  altfp_compare32_1_main_115_116_out;
+reg  altfp_main_115_116_en;
+wire  main_115_116_unused;
+wire  altfp_compare32_1_main_115_117_out;
+reg  altfp_main_115_117_en;
+wire  main_115_117_unused;
+wire  altfp_compare32_1_main_118_119_out;
+reg  altfp_main_118_119_en;
+wire  main_118_119_unused;
+wire  altfp_compare32_1_main_118_120_out;
+reg  altfp_main_118_120_en;
+wire  main_118_120_unused;
+wire  altfp_compare32_1_main_preheader1_128_out;
+reg  altfp_main_preheader1_128_en;
+wire  main_preheader1_128_unused;
+wire  altfp_compare32_1_main_129_130_out;
+reg  altfp_main_129_130_en;
+wire  main_129_130_unused;
+wire  altfp_compare32_1_main_129_131_out;
+reg  altfp_main_129_131_en;
+wire  main_129_131_unused;
+wire  altfp_compare32_1_main_132_133_out;
+reg  altfp_main_132_133_en;
+wire  main_132_133_unused;
+wire  altfp_compare32_1_main_132_134_out;
+reg  altfp_main_132_134_en;
+wire  main_132_134_unused;
+wire  altfp_compare32_1_main_135_136_out;
+reg  altfp_main_135_136_en;
+wire  main_135_136_unused;
+wire  altfp_compare32_1_main_135_137_out;
+reg  altfp_main_135_137_en;
+wire  main_135_137_unused;
+wire  altfp_compare32_1_main_138_139_out;
+reg  altfp_main_138_139_en;
+wire  main_138_139_unused;
+wire  altfp_compare32_1_main_138_140_out;
+reg  altfp_main_138_140_en;
+wire  main_138_140_unused;
+wire  altfp_compare32_1_main_141_142_out;
+reg  altfp_main_141_142_en;
+wire  main_141_142_unused;
+wire  altfp_compare32_1_main_141_143_out;
+reg  altfp_main_141_143_en;
+wire  main_141_143_unused;
+wire  altfp_compare32_1_main_144_145_out;
+reg  altfp_main_144_145_en;
+wire  main_144_145_unused;
+wire  altfp_compare32_1_main_144_146_out;
+reg  altfp_main_144_146_en;
+wire  main_144_146_unused;
+wire  altfp_compare32_1_main_147_148_out;
+reg  altfp_main_147_148_en;
+wire  main_147_148_unused;
+wire  altfp_compare32_1_main_147_149_out;
+reg  altfp_main_147_149_en;
+wire  main_147_149_unused;
+wire  altfp_compare32_1_main_150_151_out;
+reg  altfp_main_150_151_en;
+wire  main_150_151_unused;
+wire  altfp_compare32_1_main_150_152_out;
+reg  altfp_main_150_152_en;
+wire  main_150_152_unused;
+wire  altfp_compare32_1_main_153_154_out;
+reg  altfp_main_153_154_en;
+wire  main_153_154_unused;
+wire  altfp_compare32_1_main_153_155_out;
+reg  altfp_main_153_155_en;
+wire  main_153_155_unused;
+wire  altfp_compare32_1_main_156_157_out;
+reg  altfp_main_156_157_en;
+wire  main_156_157_unused;
+wire  altfp_compare32_1_main_156_158_out;
+reg  altfp_main_156_158_en;
+wire  main_156_158_unused;
+wire  altfp_compare32_1_main_rotateexiti_176_out;
+reg  altfp_main_rotateexiti_176_en;
+wire  main_rotateexiti_176_unused;
+wire  altfp_compare32_1_main_rotateexiti_177_out;
+reg  altfp_main_rotateexiti_177_en;
+wire  main_rotateexiti_177_unused;
 wire  altfp_compare32_1_main_178_179_out;
 reg  altfp_main_178_179_en;
 wire  main_178_179_unused;
@@ -1596,1234 +1513,1208 @@ wire  main_190_191_unused;
 wire  altfp_compare32_1_main_190_192_out;
 reg  altfp_main_190_192_en;
 wire  main_190_192_unused;
+wire  altfp_compare32_1_main_193_194_out;
+reg  altfp_main_193_194_en;
+wire  main_193_194_unused;
+wire  altfp_compare32_1_main_193_195_out;
+reg  altfp_main_193_195_en;
+wire  main_193_195_unused;
 
-/*   %3 = fmul float %.in1, %w_next.0.0*/
-altfp_multiplier_11 altfp_multiplier_11_main_1_3 (
-	.result (altfp_multiplier_main_1_3_out),
+/*   %8 = fmul float %5, %7*/
+altfp_multiplier_11 altfp_multiplier_11_main_1_8 (
+	.result (altfp_multiplier_main_1_8_out),
 	.dataa (main_altfp_multiply_32_0_op0),
 	.datab (main_altfp_multiply_32_0_op1),
 	.clock (clk),
-	.clk_en (altfp_main_1_3_en)
+	.clk_en (altfp_main_1_8_en)
 );
 
 
-/*   %4 = fadd float %3, 0.000000e+00*/
-altfp_adder_14 altfp_adder_14_main_1_4 (
-	.result (altfp_adder_main_1_4_out),
+/*   %9 = fadd float %8, 0.000000e+00*/
+altfp_adder_14 altfp_adder_14_main_1_9 (
+	.result (altfp_adder_main_1_9_out),
 	.dataa (main_altfp_add_32_0_op0),
 	.datab (main_altfp_add_32_0_op1),
 	.clock (clk),
-	.clk_en (altfp_main_1_4_en)
+	.clk_en (altfp_main_1_9_en)
 );
 
 
-/*   %9 = fsub float -0.000000e+00, %6*/
-altfp_subtractor_14 altfp_subtractor_14_main_8_9 (
-	.result (altfp_subtractor_main_8_9_out),
+/*   %14 = fsub float -0.000000e+00, %11*/
+altfp_subtractor_14 altfp_subtractor_14_main_13_14 (
+	.result (altfp_subtractor_main_13_14_out),
 	.dataa (main_altfp_subtract_32_0_op0),
 	.datab (main_altfp_subtract_32_0_op1),
 	.clock (clk),
-	.clk_en (altfp_main_8_9_en)
+	.clk_en (altfp_main_13_14_en)
 );
 
 
-/*   %89 = fpext float %80 to double*/
-altfp_extend_2 altfp_extend_2_main_88_89 (
-	.result (altfp_extend_main_88_89_out),
+/*   %33 = fpext float %32 to double*/
+altfp_extend_2 altfp_extend_2_main_convergedexiti_33 (
+	.result (altfp_extend_main_convergedexiti_33_out),
 	.dataa (main_altfp_extend_32_0_op0),
 	.clock (clk),
-	.clk_en (altfp_main_88_89_en)
+	.clk_en (altfp_main_convergedexiti_33_en)
 );
 
 
-/*   %7 = fcmp ogt float %6, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_1_7 (
-	.dataa (main_1_6),
+/*   %12 = fcmp ogt float %11, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_1_12 (
+	.dataa (main_1_11),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_1_7_en),
-	.aeb (main_1_7_unused),
-	.aneb (main_1_7_unused),
-	.alb (main_1_7_unused),
-	.aleb (main_1_7_unused),
-	.agb (altfp_compare32_1_main_1_7_out),
-	.ageb (main_1_7_unused),
-	.unordered (main_1_7_unused)
+	.clk_en (altfp_main_1_12_en),
+	.aeb (main_1_12_unused),
+	.aneb (main_1_12_unused),
+	.alb (main_1_12_unused),
+	.aleb (main_1_12_unused),
+	.agb (altfp_compare32_1_main_1_12_out),
+	.ageb (main_1_12_unused),
+	.unordered (main_1_12_unused)
 );
 
 
-/*   %13 = fcmp ogt float %12, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_10_13 (
-	.dataa (main_10_12),
+/*   %18 = fcmp ogt float %17, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_15_18 (
+	.dataa (main_15_17),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_10_13_en),
-	.aeb (main_10_13_unused),
-	.aneb (main_10_13_unused),
-	.alb (main_10_13_unused),
-	.aleb (main_10_13_unused),
-	.agb (altfp_compare32_1_main_10_13_out),
-	.ageb (main_10_13_unused),
-	.unordered (main_10_13_unused)
+	.clk_en (altfp_main_15_18_en),
+	.aeb (main_15_18_unused),
+	.aneb (main_15_18_unused),
+	.alb (main_15_18_unused),
+	.aleb (main_15_18_unused),
+	.agb (altfp_compare32_1_main_15_18_out),
+	.ageb (main_15_18_unused),
+	.unordered (main_15_18_unused)
 );
 
 
-/*   %29 = fcmp olt double %28, 2.000000e-02*/
-altfp_compare64_1 altfp_compare64_1_main_convergedexiti_29 (
-	.dataa (main_convergedexiti_28),
+/*   %34 = fcmp olt double %33, 2.000000e-02*/
+altfp_compare64_1 altfp_compare64_1_main_convergedexiti_34 (
+	.dataa (main_convergedexiti_33),
 	.datab (64'h3F947AE147AE147B),
 	.clock (clk),
-	.clk_en (altfp_main_convergedexiti_29_en),
-	.aeb (main_convergedexiti_29_unused),
-	.aneb (main_convergedexiti_29_unused),
-	.alb (altfp_compare64_1_main_convergedexiti_29_out),
-	.aleb (main_convergedexiti_29_unused),
-	.agb (main_convergedexiti_29_unused),
-	.ageb (main_convergedexiti_29_unused),
-	.unordered (main_convergedexiti_29_unused)
+	.clk_en (altfp_main_convergedexiti_34_en),
+	.aeb (main_convergedexiti_34_unused),
+	.aneb (main_convergedexiti_34_unused),
+	.alb (altfp_compare64_1_main_convergedexiti_34_out),
+	.aleb (main_convergedexiti_34_unused),
+	.agb (main_convergedexiti_34_unused),
+	.ageb (main_convergedexiti_34_unused),
+	.unordered (main_convergedexiti_34_unused)
 );
 
 
-/*   %43 = fcmp olt float %42, -3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_preheader15ii_43 (
-	.dataa (main_preheader15ii_42),
+/*   %45 = fcmp olt float %44, -3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_preheader15ii_45 (
+	.dataa (main_preheader15ii_44),
 	.datab (32'hC0400000),
 	.clock (clk),
-	.clk_en (altfp_main_preheader15ii_43_en),
-	.aeb (main_preheader15ii_43_unused),
-	.aneb (main_preheader15ii_43_unused),
-	.alb (altfp_compare32_1_main_preheader15ii_43_out),
-	.aleb (main_preheader15ii_43_unused),
-	.agb (main_preheader15ii_43_unused),
-	.ageb (main_preheader15ii_43_unused),
-	.unordered (main_preheader15ii_43_unused)
+	.clk_en (altfp_main_preheader15ii_45_en),
+	.aeb (main_preheader15ii_45_unused),
+	.aneb (main_preheader15ii_45_unused),
+	.alb (altfp_compare32_1_main_preheader15ii_45_out),
+	.aleb (main_preheader15ii_45_unused),
+	.agb (main_preheader15ii_45_unused),
+	.ageb (main_preheader15ii_45_unused),
+	.unordered (main_preheader15ii_45_unused)
 );
 
 
-/*   %45 = fcmp oge float %42, -3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_44_45 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %47 = fcmp oge float %44, -3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_46_47 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hC0400000),
 	.clock (clk),
-	.clk_en (altfp_main_44_45_en),
-	.aeb (main_44_45_unused),
-	.aneb (main_44_45_unused),
-	.alb (main_44_45_unused),
-	.aleb (main_44_45_unused),
-	.agb (main_44_45_unused),
-	.ageb (altfp_compare32_1_main_44_45_out),
-	.unordered (main_44_45_unused)
+	.clk_en (altfp_main_46_47_en),
+	.aeb (main_46_47_unused),
+	.aneb (main_46_47_unused),
+	.alb (main_46_47_unused),
+	.aleb (main_46_47_unused),
+	.agb (main_46_47_unused),
+	.ageb (altfp_compare32_1_main_46_47_out),
+	.unordered (main_46_47_unused)
 );
 
 
-/*   %46 = fcmp olt float %42, -2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_44_46 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %48 = fcmp olt float %44, -2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_46_48 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hC0000000),
 	.clock (clk),
-	.clk_en (altfp_main_44_46_en),
-	.aeb (main_44_46_unused),
-	.aneb (main_44_46_unused),
-	.alb (altfp_compare32_1_main_44_46_out),
-	.aleb (main_44_46_unused),
-	.agb (main_44_46_unused),
-	.ageb (main_44_46_unused),
-	.unordered (main_44_46_unused)
+	.clk_en (altfp_main_46_48_en),
+	.aeb (main_46_48_unused),
+	.aneb (main_46_48_unused),
+	.alb (altfp_compare32_1_main_46_48_out),
+	.aleb (main_46_48_unused),
+	.agb (main_46_48_unused),
+	.ageb (main_46_48_unused),
+	.unordered (main_46_48_unused)
 );
 
 
-/*   %48 = fcmp oge float %42, -2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_47_48 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %50 = fcmp oge float %44, -2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_49_50 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hC0000000),
 	.clock (clk),
-	.clk_en (altfp_main_47_48_en),
-	.aeb (main_47_48_unused),
-	.aneb (main_47_48_unused),
-	.alb (main_47_48_unused),
-	.aleb (main_47_48_unused),
-	.agb (main_47_48_unused),
-	.ageb (altfp_compare32_1_main_47_48_out),
-	.unordered (main_47_48_unused)
+	.clk_en (altfp_main_49_50_en),
+	.aeb (main_49_50_unused),
+	.aneb (main_49_50_unused),
+	.alb (main_49_50_unused),
+	.aleb (main_49_50_unused),
+	.agb (main_49_50_unused),
+	.ageb (altfp_compare32_1_main_49_50_out),
+	.unordered (main_49_50_unused)
 );
 
 
-/*   %49 = fcmp olt float %42, -1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_47_49 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %51 = fcmp olt float %44, -1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_49_51 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hBFC00000),
 	.clock (clk),
-	.clk_en (altfp_main_47_49_en),
-	.aeb (main_47_49_unused),
-	.aneb (main_47_49_unused),
-	.alb (altfp_compare32_1_main_47_49_out),
-	.aleb (main_47_49_unused),
-	.agb (main_47_49_unused),
-	.ageb (main_47_49_unused),
-	.unordered (main_47_49_unused)
+	.clk_en (altfp_main_49_51_en),
+	.aeb (main_49_51_unused),
+	.aneb (main_49_51_unused),
+	.alb (altfp_compare32_1_main_49_51_out),
+	.aleb (main_49_51_unused),
+	.agb (main_49_51_unused),
+	.ageb (main_49_51_unused),
+	.unordered (main_49_51_unused)
 );
 
 
-/*   %51 = fcmp oge float %42, -1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_50_51 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %53 = fcmp oge float %44, -1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_52_53 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hBFC00000),
 	.clock (clk),
-	.clk_en (altfp_main_50_51_en),
-	.aeb (main_50_51_unused),
-	.aneb (main_50_51_unused),
-	.alb (main_50_51_unused),
-	.aleb (main_50_51_unused),
-	.agb (main_50_51_unused),
-	.ageb (altfp_compare32_1_main_50_51_out),
-	.unordered (main_50_51_unused)
+	.clk_en (altfp_main_52_53_en),
+	.aeb (main_52_53_unused),
+	.aneb (main_52_53_unused),
+	.alb (main_52_53_unused),
+	.aleb (main_52_53_unused),
+	.agb (main_52_53_unused),
+	.ageb (altfp_compare32_1_main_52_53_out),
+	.unordered (main_52_53_unused)
 );
 
 
-/*   %52 = fcmp olt float %42, -1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_50_52 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %54 = fcmp olt float %44, -1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_52_54 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hBF800000),
 	.clock (clk),
-	.clk_en (altfp_main_50_52_en),
-	.aeb (main_50_52_unused),
-	.aneb (main_50_52_unused),
-	.alb (altfp_compare32_1_main_50_52_out),
-	.aleb (main_50_52_unused),
-	.agb (main_50_52_unused),
-	.ageb (main_50_52_unused),
-	.unordered (main_50_52_unused)
+	.clk_en (altfp_main_52_54_en),
+	.aeb (main_52_54_unused),
+	.aneb (main_52_54_unused),
+	.alb (altfp_compare32_1_main_52_54_out),
+	.aleb (main_52_54_unused),
+	.agb (main_52_54_unused),
+	.ageb (main_52_54_unused),
+	.unordered (main_52_54_unused)
 );
 
 
-/*   %54 = fcmp oge float %42, -1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_53_54 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %56 = fcmp oge float %44, -1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_55_56 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hBF800000),
 	.clock (clk),
-	.clk_en (altfp_main_53_54_en),
-	.aeb (main_53_54_unused),
-	.aneb (main_53_54_unused),
-	.alb (main_53_54_unused),
-	.aleb (main_53_54_unused),
-	.agb (main_53_54_unused),
-	.ageb (altfp_compare32_1_main_53_54_out),
-	.unordered (main_53_54_unused)
+	.clk_en (altfp_main_55_56_en),
+	.aeb (main_55_56_unused),
+	.aneb (main_55_56_unused),
+	.alb (main_55_56_unused),
+	.aleb (main_55_56_unused),
+	.agb (main_55_56_unused),
+	.ageb (altfp_compare32_1_main_55_56_out),
+	.unordered (main_55_56_unused)
 );
 
 
-/*   %55 = fcmp olt float %42, -5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_53_55 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %57 = fcmp olt float %44, -5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_55_57 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hBF000000),
 	.clock (clk),
-	.clk_en (altfp_main_53_55_en),
-	.aeb (main_53_55_unused),
-	.aneb (main_53_55_unused),
-	.alb (altfp_compare32_1_main_53_55_out),
-	.aleb (main_53_55_unused),
-	.agb (main_53_55_unused),
-	.ageb (main_53_55_unused),
-	.unordered (main_53_55_unused)
+	.clk_en (altfp_main_55_57_en),
+	.aeb (main_55_57_unused),
+	.aneb (main_55_57_unused),
+	.alb (altfp_compare32_1_main_55_57_out),
+	.aleb (main_55_57_unused),
+	.agb (main_55_57_unused),
+	.ageb (main_55_57_unused),
+	.unordered (main_55_57_unused)
 );
 
 
-/*   %57 = fcmp oge float %42, -5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_56_57 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %59 = fcmp oge float %44, -5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_58_59 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'hBF000000),
 	.clock (clk),
-	.clk_en (altfp_main_56_57_en),
-	.aeb (main_56_57_unused),
-	.aneb (main_56_57_unused),
-	.alb (main_56_57_unused),
-	.aleb (main_56_57_unused),
-	.agb (main_56_57_unused),
-	.ageb (altfp_compare32_1_main_56_57_out),
-	.unordered (main_56_57_unused)
+	.clk_en (altfp_main_58_59_en),
+	.aeb (main_58_59_unused),
+	.aneb (main_58_59_unused),
+	.alb (main_58_59_unused),
+	.aleb (main_58_59_unused),
+	.agb (main_58_59_unused),
+	.ageb (altfp_compare32_1_main_58_59_out),
+	.unordered (main_58_59_unused)
 );
 
 
-/*   %58 = fcmp olt float %42, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_56_58 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %60 = fcmp olt float %44, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_58_60 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_56_58_en),
-	.aeb (main_56_58_unused),
-	.aneb (main_56_58_unused),
-	.alb (altfp_compare32_1_main_56_58_out),
-	.aleb (main_56_58_unused),
-	.agb (main_56_58_unused),
-	.ageb (main_56_58_unused),
-	.unordered (main_56_58_unused)
+	.clk_en (altfp_main_58_60_en),
+	.aeb (main_58_60_unused),
+	.aneb (main_58_60_unused),
+	.alb (altfp_compare32_1_main_58_60_out),
+	.aleb (main_58_60_unused),
+	.agb (main_58_60_unused),
+	.ageb (main_58_60_unused),
+	.unordered (main_58_60_unused)
 );
 
 
-/*   %60 = fcmp oge float %42, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_59_60 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %62 = fcmp oge float %44, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_61_62 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_59_60_en),
-	.aeb (main_59_60_unused),
-	.aneb (main_59_60_unused),
-	.alb (main_59_60_unused),
-	.aleb (main_59_60_unused),
-	.agb (main_59_60_unused),
-	.ageb (altfp_compare32_1_main_59_60_out),
-	.unordered (main_59_60_unused)
+	.clk_en (altfp_main_61_62_en),
+	.aeb (main_61_62_unused),
+	.aneb (main_61_62_unused),
+	.alb (main_61_62_unused),
+	.aleb (main_61_62_unused),
+	.agb (main_61_62_unused),
+	.ageb (altfp_compare32_1_main_61_62_out),
+	.unordered (main_61_62_unused)
 );
 
 
-/*   %61 = fcmp olt float %42, 5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_59_61 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %63 = fcmp olt float %44, 5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_61_63 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h3F000000),
 	.clock (clk),
-	.clk_en (altfp_main_59_61_en),
-	.aeb (main_59_61_unused),
-	.aneb (main_59_61_unused),
-	.alb (altfp_compare32_1_main_59_61_out),
-	.aleb (main_59_61_unused),
-	.agb (main_59_61_unused),
-	.ageb (main_59_61_unused),
-	.unordered (main_59_61_unused)
+	.clk_en (altfp_main_61_63_en),
+	.aeb (main_61_63_unused),
+	.aneb (main_61_63_unused),
+	.alb (altfp_compare32_1_main_61_63_out),
+	.aleb (main_61_63_unused),
+	.agb (main_61_63_unused),
+	.ageb (main_61_63_unused),
+	.unordered (main_61_63_unused)
 );
 
 
-/*   %63 = fcmp oge float %42, 5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_62_63 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %65 = fcmp oge float %44, 5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_64_65 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h3F000000),
 	.clock (clk),
-	.clk_en (altfp_main_62_63_en),
-	.aeb (main_62_63_unused),
-	.aneb (main_62_63_unused),
-	.alb (main_62_63_unused),
-	.aleb (main_62_63_unused),
-	.agb (main_62_63_unused),
-	.ageb (altfp_compare32_1_main_62_63_out),
-	.unordered (main_62_63_unused)
+	.clk_en (altfp_main_64_65_en),
+	.aeb (main_64_65_unused),
+	.aneb (main_64_65_unused),
+	.alb (main_64_65_unused),
+	.aleb (main_64_65_unused),
+	.agb (main_64_65_unused),
+	.ageb (altfp_compare32_1_main_64_65_out),
+	.unordered (main_64_65_unused)
 );
 
 
-/*   %64 = fcmp olt float %42, 1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_62_64 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %66 = fcmp olt float %44, 1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_64_66 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h3F800000),
 	.clock (clk),
-	.clk_en (altfp_main_62_64_en),
-	.aeb (main_62_64_unused),
-	.aneb (main_62_64_unused),
-	.alb (altfp_compare32_1_main_62_64_out),
-	.aleb (main_62_64_unused),
-	.agb (main_62_64_unused),
-	.ageb (main_62_64_unused),
-	.unordered (main_62_64_unused)
+	.clk_en (altfp_main_64_66_en),
+	.aeb (main_64_66_unused),
+	.aneb (main_64_66_unused),
+	.alb (altfp_compare32_1_main_64_66_out),
+	.aleb (main_64_66_unused),
+	.agb (main_64_66_unused),
+	.ageb (main_64_66_unused),
+	.unordered (main_64_66_unused)
 );
 
 
-/*   %66 = fcmp oge float %42, 1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_65_66 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %68 = fcmp oge float %44, 1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_67_68 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h3F800000),
 	.clock (clk),
-	.clk_en (altfp_main_65_66_en),
-	.aeb (main_65_66_unused),
-	.aneb (main_65_66_unused),
-	.alb (main_65_66_unused),
-	.aleb (main_65_66_unused),
-	.agb (main_65_66_unused),
-	.ageb (altfp_compare32_1_main_65_66_out),
-	.unordered (main_65_66_unused)
+	.clk_en (altfp_main_67_68_en),
+	.aeb (main_67_68_unused),
+	.aneb (main_67_68_unused),
+	.alb (main_67_68_unused),
+	.aleb (main_67_68_unused),
+	.agb (main_67_68_unused),
+	.ageb (altfp_compare32_1_main_67_68_out),
+	.unordered (main_67_68_unused)
 );
 
 
-/*   %67 = fcmp olt float %42, 1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_65_67 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %69 = fcmp olt float %44, 1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_67_69 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h3FC00000),
 	.clock (clk),
-	.clk_en (altfp_main_65_67_en),
-	.aeb (main_65_67_unused),
-	.aneb (main_65_67_unused),
-	.alb (altfp_compare32_1_main_65_67_out),
-	.aleb (main_65_67_unused),
-	.agb (main_65_67_unused),
-	.ageb (main_65_67_unused),
-	.unordered (main_65_67_unused)
+	.clk_en (altfp_main_67_69_en),
+	.aeb (main_67_69_unused),
+	.aneb (main_67_69_unused),
+	.alb (altfp_compare32_1_main_67_69_out),
+	.aleb (main_67_69_unused),
+	.agb (main_67_69_unused),
+	.ageb (main_67_69_unused),
+	.unordered (main_67_69_unused)
 );
 
 
-/*   %69 = fcmp oge float %42, 1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_68_69 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %71 = fcmp oge float %44, 1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_70_71 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h3FC00000),
 	.clock (clk),
-	.clk_en (altfp_main_68_69_en),
-	.aeb (main_68_69_unused),
-	.aneb (main_68_69_unused),
-	.alb (main_68_69_unused),
-	.aleb (main_68_69_unused),
-	.agb (main_68_69_unused),
-	.ageb (altfp_compare32_1_main_68_69_out),
-	.unordered (main_68_69_unused)
+	.clk_en (altfp_main_70_71_en),
+	.aeb (main_70_71_unused),
+	.aneb (main_70_71_unused),
+	.alb (main_70_71_unused),
+	.aleb (main_70_71_unused),
+	.agb (main_70_71_unused),
+	.ageb (altfp_compare32_1_main_70_71_out),
+	.unordered (main_70_71_unused)
 );
 
 
-/*   %70 = fcmp olt float %42, 2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_68_70 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %72 = fcmp olt float %44, 2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_70_72 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h40000000),
 	.clock (clk),
-	.clk_en (altfp_main_68_70_en),
-	.aeb (main_68_70_unused),
-	.aneb (main_68_70_unused),
-	.alb (altfp_compare32_1_main_68_70_out),
-	.aleb (main_68_70_unused),
-	.agb (main_68_70_unused),
-	.ageb (main_68_70_unused),
-	.unordered (main_68_70_unused)
+	.clk_en (altfp_main_70_72_en),
+	.aeb (main_70_72_unused),
+	.aneb (main_70_72_unused),
+	.alb (altfp_compare32_1_main_70_72_out),
+	.aleb (main_70_72_unused),
+	.agb (main_70_72_unused),
+	.ageb (main_70_72_unused),
+	.unordered (main_70_72_unused)
 );
 
 
-/*   %72 = fcmp oge float %42, 2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_71_72 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %74 = fcmp oge float %44, 2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_73_74 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h40000000),
 	.clock (clk),
-	.clk_en (altfp_main_71_72_en),
-	.aeb (main_71_72_unused),
-	.aneb (main_71_72_unused),
-	.alb (main_71_72_unused),
-	.aleb (main_71_72_unused),
-	.agb (main_71_72_unused),
-	.ageb (altfp_compare32_1_main_71_72_out),
-	.unordered (main_71_72_unused)
+	.clk_en (altfp_main_73_74_en),
+	.aeb (main_73_74_unused),
+	.aneb (main_73_74_unused),
+	.alb (main_73_74_unused),
+	.aleb (main_73_74_unused),
+	.agb (main_73_74_unused),
+	.ageb (altfp_compare32_1_main_73_74_out),
+	.unordered (main_73_74_unused)
 );
 
 
-/*   %73 = fcmp olt float %42, 3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_71_73 (
-	.dataa (main_preheader15ii_42_reg),
+/*   %75 = fcmp olt float %44, 3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_73_75 (
+	.dataa (main_preheader15ii_44_reg),
 	.datab (32'h40400000),
 	.clock (clk),
-	.clk_en (altfp_main_71_73_en),
-	.aeb (main_71_73_unused),
-	.aneb (main_71_73_unused),
-	.alb (altfp_compare32_1_main_71_73_out),
-	.aleb (main_71_73_unused),
-	.agb (main_71_73_unused),
-	.ageb (main_71_73_unused),
-	.unordered (main_71_73_unused)
+	.clk_en (altfp_main_73_75_en),
+	.aeb (main_73_75_unused),
+	.aneb (main_73_75_unused),
+	.alb (altfp_compare32_1_main_73_75_out),
+	.aleb (main_73_75_unused),
+	.agb (main_73_75_unused),
+	.ageb (main_73_75_unused),
+	.unordered (main_73_75_unused)
 );
 
 
-/*   %81 = fcmp olt float %80, -3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_preheader_81 (
-	.dataa (main_preheader_80),
+/*   %83 = fcmp olt float %82, -3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_preheader_83 (
+	.dataa (main_preheader_82),
 	.datab (32'hC0400000),
 	.clock (clk),
-	.clk_en (altfp_main_preheader_81_en),
-	.aeb (main_preheader_81_unused),
-	.aneb (main_preheader_81_unused),
-	.alb (altfp_compare32_1_main_preheader_81_out),
-	.aleb (main_preheader_81_unused),
-	.agb (main_preheader_81_unused),
-	.ageb (main_preheader_81_unused),
-	.unordered (main_preheader_81_unused)
+	.clk_en (altfp_main_preheader_83_en),
+	.aeb (main_preheader_83_unused),
+	.aneb (main_preheader_83_unused),
+	.alb (altfp_compare32_1_main_preheader_83_out),
+	.aleb (main_preheader_83_unused),
+	.agb (main_preheader_83_unused),
+	.ageb (main_preheader_83_unused),
+	.unordered (main_preheader_83_unused)
 );
 
 
-/*   %83 = fcmp oge float %80, -3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_82_83 (
-	.dataa (main_preheader_80_reg),
+/*   %85 = fcmp oge float %82, -3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_84_85 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hC0400000),
 	.clock (clk),
-	.clk_en (altfp_main_82_83_en),
-	.aeb (main_82_83_unused),
-	.aneb (main_82_83_unused),
-	.alb (main_82_83_unused),
-	.aleb (main_82_83_unused),
-	.agb (main_82_83_unused),
-	.ageb (altfp_compare32_1_main_82_83_out),
-	.unordered (main_82_83_unused)
+	.clk_en (altfp_main_84_85_en),
+	.aeb (main_84_85_unused),
+	.aneb (main_84_85_unused),
+	.alb (main_84_85_unused),
+	.aleb (main_84_85_unused),
+	.agb (main_84_85_unused),
+	.ageb (altfp_compare32_1_main_84_85_out),
+	.unordered (main_84_85_unused)
 );
 
 
-/*   %84 = fcmp olt float %80, -2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_82_84 (
-	.dataa (main_preheader_80_reg),
+/*   %86 = fcmp olt float %82, -2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_84_86 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hC0000000),
 	.clock (clk),
-	.clk_en (altfp_main_82_84_en),
-	.aeb (main_82_84_unused),
-	.aneb (main_82_84_unused),
-	.alb (altfp_compare32_1_main_82_84_out),
-	.aleb (main_82_84_unused),
-	.agb (main_82_84_unused),
-	.ageb (main_82_84_unused),
-	.unordered (main_82_84_unused)
+	.clk_en (altfp_main_84_86_en),
+	.aeb (main_84_86_unused),
+	.aneb (main_84_86_unused),
+	.alb (altfp_compare32_1_main_84_86_out),
+	.aleb (main_84_86_unused),
+	.agb (main_84_86_unused),
+	.ageb (main_84_86_unused),
+	.unordered (main_84_86_unused)
 );
 
 
-/*   %86 = fcmp oge float %80, -2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_85_86 (
-	.dataa (main_preheader_80_reg),
+/*   %88 = fcmp oge float %82, -2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_87_88 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hC0000000),
 	.clock (clk),
-	.clk_en (altfp_main_85_86_en),
-	.aeb (main_85_86_unused),
-	.aneb (main_85_86_unused),
-	.alb (main_85_86_unused),
-	.aleb (main_85_86_unused),
-	.agb (main_85_86_unused),
-	.ageb (altfp_compare32_1_main_85_86_out),
-	.unordered (main_85_86_unused)
+	.clk_en (altfp_main_87_88_en),
+	.aeb (main_87_88_unused),
+	.aneb (main_87_88_unused),
+	.alb (main_87_88_unused),
+	.aleb (main_87_88_unused),
+	.agb (main_87_88_unused),
+	.ageb (altfp_compare32_1_main_87_88_out),
+	.unordered (main_87_88_unused)
 );
 
 
-/*   %87 = fcmp olt float %80, -1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_85_87 (
-	.dataa (main_preheader_80_reg),
+/*   %89 = fcmp olt float %82, -1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_87_89 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hBFC00000),
 	.clock (clk),
-	.clk_en (altfp_main_85_87_en),
-	.aeb (main_85_87_unused),
-	.aneb (main_85_87_unused),
-	.alb (altfp_compare32_1_main_85_87_out),
-	.aleb (main_85_87_unused),
-	.agb (main_85_87_unused),
-	.ageb (main_85_87_unused),
-	.unordered (main_85_87_unused)
+	.clk_en (altfp_main_87_89_en),
+	.aeb (main_87_89_unused),
+	.aneb (main_87_89_unused),
+	.alb (altfp_compare32_1_main_87_89_out),
+	.aleb (main_87_89_unused),
+	.agb (main_87_89_unused),
+	.ageb (main_87_89_unused),
+	.unordered (main_87_89_unused)
 );
 
 
-/*   %90 = fcmp oge float %80, -1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_88_90 (
-	.dataa (main_preheader_80_reg),
+/*   %92 = fcmp oge float %82, -1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_90_92 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hBFC00000),
 	.clock (clk),
-	.clk_en (altfp_main_88_90_en),
-	.aeb (main_88_90_unused),
-	.aneb (main_88_90_unused),
-	.alb (main_88_90_unused),
-	.aleb (main_88_90_unused),
-	.agb (main_88_90_unused),
-	.ageb (altfp_compare32_1_main_88_90_out),
-	.unordered (main_88_90_unused)
+	.clk_en (altfp_main_90_92_en),
+	.aeb (main_90_92_unused),
+	.aneb (main_90_92_unused),
+	.alb (main_90_92_unused),
+	.aleb (main_90_92_unused),
+	.agb (main_90_92_unused),
+	.ageb (altfp_compare32_1_main_90_92_out),
+	.unordered (main_90_92_unused)
 );
 
 
-/*   %91 = fcmp olt float %80, -1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_88_91 (
-	.dataa (main_preheader_80_reg),
+/*   %93 = fcmp olt float %82, -1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_90_93 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hBF800000),
 	.clock (clk),
-	.clk_en (altfp_main_88_91_en),
-	.aeb (main_88_91_unused),
-	.aneb (main_88_91_unused),
-	.alb (altfp_compare32_1_main_88_91_out),
-	.aleb (main_88_91_unused),
-	.agb (main_88_91_unused),
-	.ageb (main_88_91_unused),
-	.unordered (main_88_91_unused)
+	.clk_en (altfp_main_90_93_en),
+	.aeb (main_90_93_unused),
+	.aneb (main_90_93_unused),
+	.alb (altfp_compare32_1_main_90_93_out),
+	.aleb (main_90_93_unused),
+	.agb (main_90_93_unused),
+	.ageb (main_90_93_unused),
+	.unordered (main_90_93_unused)
 );
 
 
-/*   %93 = fcmp oge float %80, -1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_92_93 (
-	.dataa (main_preheader_80_reg),
+/*   %95 = fcmp oge float %82, -1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_94_95 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hBF800000),
 	.clock (clk),
-	.clk_en (altfp_main_92_93_en),
-	.aeb (main_92_93_unused),
-	.aneb (main_92_93_unused),
-	.alb (main_92_93_unused),
-	.aleb (main_92_93_unused),
-	.agb (main_92_93_unused),
-	.ageb (altfp_compare32_1_main_92_93_out),
-	.unordered (main_92_93_unused)
+	.clk_en (altfp_main_94_95_en),
+	.aeb (main_94_95_unused),
+	.aneb (main_94_95_unused),
+	.alb (main_94_95_unused),
+	.aleb (main_94_95_unused),
+	.agb (main_94_95_unused),
+	.ageb (altfp_compare32_1_main_94_95_out),
+	.unordered (main_94_95_unused)
 );
 
 
-/*   %94 = fcmp olt float %80, -5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_92_94 (
-	.dataa (main_preheader_80_reg),
+/*   %96 = fcmp olt float %82, -5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_94_96 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hBF000000),
 	.clock (clk),
-	.clk_en (altfp_main_92_94_en),
-	.aeb (main_92_94_unused),
-	.aneb (main_92_94_unused),
-	.alb (altfp_compare32_1_main_92_94_out),
-	.aleb (main_92_94_unused),
-	.agb (main_92_94_unused),
-	.ageb (main_92_94_unused),
-	.unordered (main_92_94_unused)
+	.clk_en (altfp_main_94_96_en),
+	.aeb (main_94_96_unused),
+	.aneb (main_94_96_unused),
+	.alb (altfp_compare32_1_main_94_96_out),
+	.aleb (main_94_96_unused),
+	.agb (main_94_96_unused),
+	.ageb (main_94_96_unused),
+	.unordered (main_94_96_unused)
 );
 
 
-/*   %96 = fcmp oge float %80, -5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_95_96 (
-	.dataa (main_preheader_80_reg),
+/*   %98 = fcmp oge float %82, -5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_97_98 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'hBF000000),
 	.clock (clk),
-	.clk_en (altfp_main_95_96_en),
-	.aeb (main_95_96_unused),
-	.aneb (main_95_96_unused),
-	.alb (main_95_96_unused),
-	.aleb (main_95_96_unused),
-	.agb (main_95_96_unused),
-	.ageb (altfp_compare32_1_main_95_96_out),
-	.unordered (main_95_96_unused)
+	.clk_en (altfp_main_97_98_en),
+	.aeb (main_97_98_unused),
+	.aneb (main_97_98_unused),
+	.alb (main_97_98_unused),
+	.aleb (main_97_98_unused),
+	.agb (main_97_98_unused),
+	.ageb (altfp_compare32_1_main_97_98_out),
+	.unordered (main_97_98_unused)
 );
 
 
-/*   %97 = fcmp olt double %89, -2.000000e-01*/
-altfp_compare64_1 altfp_compare64_1_main_95_97 (
-	.dataa (main_88_89_reg),
+/*   %99 = fcmp olt double %91, -2.000000e-01*/
+altfp_compare64_1 altfp_compare64_1_main_97_99 (
+	.dataa (main_90_91_reg),
 	.datab (64'hBFC999999999999A),
 	.clock (clk),
-	.clk_en (altfp_main_95_97_en),
-	.aeb (main_95_97_unused),
-	.aneb (main_95_97_unused),
-	.alb (altfp_compare64_1_main_95_97_out),
-	.aleb (main_95_97_unused),
-	.agb (main_95_97_unused),
-	.ageb (main_95_97_unused),
-	.unordered (main_95_97_unused)
+	.clk_en (altfp_main_97_99_en),
+	.aeb (main_97_99_unused),
+	.aneb (main_97_99_unused),
+	.alb (altfp_compare64_1_main_97_99_out),
+	.aleb (main_97_99_unused),
+	.agb (main_97_99_unused),
+	.ageb (main_97_99_unused),
+	.unordered (main_97_99_unused)
 );
 
 
-/*   %99 = fcmp oge double %89, -2.000000e-01*/
-altfp_compare64_1 altfp_compare64_1_main_98_99 (
-	.dataa (main_88_89_reg),
+/*   %101 = fcmp oge double %91, -2.000000e-01*/
+altfp_compare64_1 altfp_compare64_1_main_100_101 (
+	.dataa (main_90_91_reg),
 	.datab (64'hBFC999999999999A),
 	.clock (clk),
-	.clk_en (altfp_main_98_99_en),
-	.aeb (main_98_99_unused),
-	.aneb (main_98_99_unused),
-	.alb (main_98_99_unused),
-	.aleb (main_98_99_unused),
-	.agb (main_98_99_unused),
-	.ageb (altfp_compare64_1_main_98_99_out),
-	.unordered (main_98_99_unused)
+	.clk_en (altfp_main_100_101_en),
+	.aeb (main_100_101_unused),
+	.aneb (main_100_101_unused),
+	.alb (main_100_101_unused),
+	.aleb (main_100_101_unused),
+	.agb (main_100_101_unused),
+	.ageb (altfp_compare64_1_main_100_101_out),
+	.unordered (main_100_101_unused)
 );
 
 
-/*   %100 = fcmp olt float %80, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_98_100 (
-	.dataa (main_preheader_80_reg),
+/*   %102 = fcmp olt float %82, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_100_102 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_98_100_en),
-	.aeb (main_98_100_unused),
-	.aneb (main_98_100_unused),
-	.alb (altfp_compare32_1_main_98_100_out),
-	.aleb (main_98_100_unused),
-	.agb (main_98_100_unused),
-	.ageb (main_98_100_unused),
-	.unordered (main_98_100_unused)
+	.clk_en (altfp_main_100_102_en),
+	.aeb (main_100_102_unused),
+	.aneb (main_100_102_unused),
+	.alb (altfp_compare32_1_main_100_102_out),
+	.aleb (main_100_102_unused),
+	.agb (main_100_102_unused),
+	.ageb (main_100_102_unused),
+	.unordered (main_100_102_unused)
 );
 
 
-/*   %102 = fcmp oge float %80, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_101_102 (
-	.dataa (main_preheader_80_reg),
+/*   %104 = fcmp oge float %82, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_103_104 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_101_102_en),
-	.aeb (main_101_102_unused),
-	.aneb (main_101_102_unused),
-	.alb (main_101_102_unused),
-	.aleb (main_101_102_unused),
-	.agb (main_101_102_unused),
-	.ageb (altfp_compare32_1_main_101_102_out),
-	.unordered (main_101_102_unused)
+	.clk_en (altfp_main_103_104_en),
+	.aeb (main_103_104_unused),
+	.aneb (main_103_104_unused),
+	.alb (main_103_104_unused),
+	.aleb (main_103_104_unused),
+	.agb (main_103_104_unused),
+	.ageb (altfp_compare32_1_main_103_104_out),
+	.unordered (main_103_104_unused)
 );
 
 
-/*   %103 = fcmp olt double %89, 2.000000e-01*/
-altfp_compare64_1 altfp_compare64_1_main_101_103 (
-	.dataa (main_88_89_reg),
+/*   %105 = fcmp olt double %91, 2.000000e-01*/
+altfp_compare64_1 altfp_compare64_1_main_103_105 (
+	.dataa (main_90_91_reg),
 	.datab (64'h3FC999999999999A),
 	.clock (clk),
-	.clk_en (altfp_main_101_103_en),
-	.aeb (main_101_103_unused),
-	.aneb (main_101_103_unused),
-	.alb (altfp_compare64_1_main_101_103_out),
-	.aleb (main_101_103_unused),
-	.agb (main_101_103_unused),
-	.ageb (main_101_103_unused),
-	.unordered (main_101_103_unused)
+	.clk_en (altfp_main_103_105_en),
+	.aeb (main_103_105_unused),
+	.aneb (main_103_105_unused),
+	.alb (altfp_compare64_1_main_103_105_out),
+	.aleb (main_103_105_unused),
+	.agb (main_103_105_unused),
+	.ageb (main_103_105_unused),
+	.unordered (main_103_105_unused)
 );
 
 
-/*   %105 = fcmp oge double %89, 2.000000e-01*/
-altfp_compare64_1 altfp_compare64_1_main_104_105 (
-	.dataa (main_88_89_reg),
+/*   %107 = fcmp oge double %91, 2.000000e-01*/
+altfp_compare64_1 altfp_compare64_1_main_106_107 (
+	.dataa (main_90_91_reg),
 	.datab (64'h3FC999999999999A),
 	.clock (clk),
-	.clk_en (altfp_main_104_105_en),
-	.aeb (main_104_105_unused),
-	.aneb (main_104_105_unused),
-	.alb (main_104_105_unused),
-	.aleb (main_104_105_unused),
-	.agb (main_104_105_unused),
-	.ageb (altfp_compare64_1_main_104_105_out),
-	.unordered (main_104_105_unused)
+	.clk_en (altfp_main_106_107_en),
+	.aeb (main_106_107_unused),
+	.aneb (main_106_107_unused),
+	.alb (main_106_107_unused),
+	.aleb (main_106_107_unused),
+	.agb (main_106_107_unused),
+	.ageb (altfp_compare64_1_main_106_107_out),
+	.unordered (main_106_107_unused)
 );
 
 
-/*   %106 = fcmp olt float %80, 5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_104_106 (
-	.dataa (main_preheader_80_reg),
+/*   %108 = fcmp olt float %82, 5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_106_108 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h3F000000),
 	.clock (clk),
-	.clk_en (altfp_main_104_106_en),
-	.aeb (main_104_106_unused),
-	.aneb (main_104_106_unused),
-	.alb (altfp_compare32_1_main_104_106_out),
-	.aleb (main_104_106_unused),
-	.agb (main_104_106_unused),
-	.ageb (main_104_106_unused),
-	.unordered (main_104_106_unused)
+	.clk_en (altfp_main_106_108_en),
+	.aeb (main_106_108_unused),
+	.aneb (main_106_108_unused),
+	.alb (altfp_compare32_1_main_106_108_out),
+	.aleb (main_106_108_unused),
+	.agb (main_106_108_unused),
+	.ageb (main_106_108_unused),
+	.unordered (main_106_108_unused)
 );
 
 
-/*   %108 = fcmp oge float %80, 5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_107_108 (
-	.dataa (main_preheader_80_reg),
+/*   %110 = fcmp oge float %82, 5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_109_110 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h3F000000),
 	.clock (clk),
-	.clk_en (altfp_main_107_108_en),
-	.aeb (main_107_108_unused),
-	.aneb (main_107_108_unused),
-	.alb (main_107_108_unused),
-	.aleb (main_107_108_unused),
-	.agb (main_107_108_unused),
-	.ageb (altfp_compare32_1_main_107_108_out),
-	.unordered (main_107_108_unused)
+	.clk_en (altfp_main_109_110_en),
+	.aeb (main_109_110_unused),
+	.aneb (main_109_110_unused),
+	.alb (main_109_110_unused),
+	.aleb (main_109_110_unused),
+	.agb (main_109_110_unused),
+	.ageb (altfp_compare32_1_main_109_110_out),
+	.unordered (main_109_110_unused)
 );
 
 
-/*   %109 = fcmp olt float %80, 1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_107_109 (
-	.dataa (main_preheader_80_reg),
+/*   %111 = fcmp olt float %82, 1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_109_111 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h3F800000),
 	.clock (clk),
-	.clk_en (altfp_main_107_109_en),
-	.aeb (main_107_109_unused),
-	.aneb (main_107_109_unused),
-	.alb (altfp_compare32_1_main_107_109_out),
-	.aleb (main_107_109_unused),
-	.agb (main_107_109_unused),
-	.ageb (main_107_109_unused),
-	.unordered (main_107_109_unused)
+	.clk_en (altfp_main_109_111_en),
+	.aeb (main_109_111_unused),
+	.aneb (main_109_111_unused),
+	.alb (altfp_compare32_1_main_109_111_out),
+	.aleb (main_109_111_unused),
+	.agb (main_109_111_unused),
+	.ageb (main_109_111_unused),
+	.unordered (main_109_111_unused)
 );
 
 
-/*   %111 = fcmp oge float %80, 1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_110_111 (
-	.dataa (main_preheader_80_reg),
+/*   %113 = fcmp oge float %82, 1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_112_113 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h3F800000),
 	.clock (clk),
-	.clk_en (altfp_main_110_111_en),
-	.aeb (main_110_111_unused),
-	.aneb (main_110_111_unused),
-	.alb (main_110_111_unused),
-	.aleb (main_110_111_unused),
-	.agb (main_110_111_unused),
-	.ageb (altfp_compare32_1_main_110_111_out),
-	.unordered (main_110_111_unused)
+	.clk_en (altfp_main_112_113_en),
+	.aeb (main_112_113_unused),
+	.aneb (main_112_113_unused),
+	.alb (main_112_113_unused),
+	.aleb (main_112_113_unused),
+	.agb (main_112_113_unused),
+	.ageb (altfp_compare32_1_main_112_113_out),
+	.unordered (main_112_113_unused)
 );
 
 
-/*   %112 = fcmp olt float %80, 1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_110_112 (
-	.dataa (main_preheader_80_reg),
+/*   %114 = fcmp olt float %82, 1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_112_114 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h3FC00000),
 	.clock (clk),
-	.clk_en (altfp_main_110_112_en),
-	.aeb (main_110_112_unused),
-	.aneb (main_110_112_unused),
-	.alb (altfp_compare32_1_main_110_112_out),
-	.aleb (main_110_112_unused),
-	.agb (main_110_112_unused),
-	.ageb (main_110_112_unused),
-	.unordered (main_110_112_unused)
+	.clk_en (altfp_main_112_114_en),
+	.aeb (main_112_114_unused),
+	.aneb (main_112_114_unused),
+	.alb (altfp_compare32_1_main_112_114_out),
+	.aleb (main_112_114_unused),
+	.agb (main_112_114_unused),
+	.ageb (main_112_114_unused),
+	.unordered (main_112_114_unused)
 );
 
 
-/*   %114 = fcmp oge float %80, 1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_113_114 (
-	.dataa (main_preheader_80_reg),
+/*   %116 = fcmp oge float %82, 1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_115_116 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h3FC00000),
 	.clock (clk),
-	.clk_en (altfp_main_113_114_en),
-	.aeb (main_113_114_unused),
-	.aneb (main_113_114_unused),
-	.alb (main_113_114_unused),
-	.aleb (main_113_114_unused),
-	.agb (main_113_114_unused),
-	.ageb (altfp_compare32_1_main_113_114_out),
-	.unordered (main_113_114_unused)
+	.clk_en (altfp_main_115_116_en),
+	.aeb (main_115_116_unused),
+	.aneb (main_115_116_unused),
+	.alb (main_115_116_unused),
+	.aleb (main_115_116_unused),
+	.agb (main_115_116_unused),
+	.ageb (altfp_compare32_1_main_115_116_out),
+	.unordered (main_115_116_unused)
 );
 
 
-/*   %115 = fcmp olt float %80, 2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_113_115 (
-	.dataa (main_preheader_80_reg),
+/*   %117 = fcmp olt float %82, 2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_115_117 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h40000000),
 	.clock (clk),
-	.clk_en (altfp_main_113_115_en),
-	.aeb (main_113_115_unused),
-	.aneb (main_113_115_unused),
-	.alb (altfp_compare32_1_main_113_115_out),
-	.aleb (main_113_115_unused),
-	.agb (main_113_115_unused),
-	.ageb (main_113_115_unused),
-	.unordered (main_113_115_unused)
+	.clk_en (altfp_main_115_117_en),
+	.aeb (main_115_117_unused),
+	.aneb (main_115_117_unused),
+	.alb (altfp_compare32_1_main_115_117_out),
+	.aleb (main_115_117_unused),
+	.agb (main_115_117_unused),
+	.ageb (main_115_117_unused),
+	.unordered (main_115_117_unused)
 );
 
 
-/*   %117 = fcmp oge float %80, 2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_116_117 (
-	.dataa (main_preheader_80_reg),
+/*   %119 = fcmp oge float %82, 2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_118_119 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h40000000),
 	.clock (clk),
-	.clk_en (altfp_main_116_117_en),
-	.aeb (main_116_117_unused),
-	.aneb (main_116_117_unused),
-	.alb (main_116_117_unused),
-	.aleb (main_116_117_unused),
-	.agb (main_116_117_unused),
-	.ageb (altfp_compare32_1_main_116_117_out),
-	.unordered (main_116_117_unused)
+	.clk_en (altfp_main_118_119_en),
+	.aeb (main_118_119_unused),
+	.aneb (main_118_119_unused),
+	.alb (main_118_119_unused),
+	.aleb (main_118_119_unused),
+	.agb (main_118_119_unused),
+	.ageb (altfp_compare32_1_main_118_119_out),
+	.unordered (main_118_119_unused)
 );
 
 
-/*   %118 = fcmp olt float %80, 3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_116_118 (
-	.dataa (main_preheader_80_reg),
+/*   %120 = fcmp olt float %82, 3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_118_120 (
+	.dataa (main_preheader_82_reg),
 	.datab (32'h40400000),
 	.clock (clk),
-	.clk_en (altfp_main_116_118_en),
-	.aeb (main_116_118_unused),
-	.aneb (main_116_118_unused),
-	.alb (altfp_compare32_1_main_116_118_out),
-	.aleb (main_116_118_unused),
-	.agb (main_116_118_unused),
-	.ageb (main_116_118_unused),
-	.unordered (main_116_118_unused)
+	.clk_en (altfp_main_118_120_en),
+	.aeb (main_118_120_unused),
+	.aneb (main_118_120_unused),
+	.alb (altfp_compare32_1_main_118_120_out),
+	.aleb (main_118_120_unused),
+	.agb (main_118_120_unused),
+	.ageb (main_118_120_unused),
+	.unordered (main_118_120_unused)
 );
 
 
-/*   %126 = fcmp olt float %125, -3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_preheader5_126 (
-	.dataa (main_preheader5_125),
+/*   %128 = fcmp olt float %127, -3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_preheader1_128 (
+	.dataa (main_preheader1_127),
 	.datab (32'hC0400000),
 	.clock (clk),
-	.clk_en (altfp_main_preheader5_126_en),
-	.aeb (main_preheader5_126_unused),
-	.aneb (main_preheader5_126_unused),
-	.alb (altfp_compare32_1_main_preheader5_126_out),
-	.aleb (main_preheader5_126_unused),
-	.agb (main_preheader5_126_unused),
-	.ageb (main_preheader5_126_unused),
-	.unordered (main_preheader5_126_unused)
+	.clk_en (altfp_main_preheader1_128_en),
+	.aeb (main_preheader1_128_unused),
+	.aneb (main_preheader1_128_unused),
+	.alb (altfp_compare32_1_main_preheader1_128_out),
+	.aleb (main_preheader1_128_unused),
+	.agb (main_preheader1_128_unused),
+	.ageb (main_preheader1_128_unused),
+	.unordered (main_preheader1_128_unused)
 );
 
 
-/*   %128 = fcmp oge float %125, -3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_127_128 (
-	.dataa (main_preheader5_125_reg),
+/*   %130 = fcmp oge float %127, -3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_129_130 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hC0400000),
 	.clock (clk),
-	.clk_en (altfp_main_127_128_en),
-	.aeb (main_127_128_unused),
-	.aneb (main_127_128_unused),
-	.alb (main_127_128_unused),
-	.aleb (main_127_128_unused),
-	.agb (main_127_128_unused),
-	.ageb (altfp_compare32_1_main_127_128_out),
-	.unordered (main_127_128_unused)
+	.clk_en (altfp_main_129_130_en),
+	.aeb (main_129_130_unused),
+	.aneb (main_129_130_unused),
+	.alb (main_129_130_unused),
+	.aleb (main_129_130_unused),
+	.agb (main_129_130_unused),
+	.ageb (altfp_compare32_1_main_129_130_out),
+	.unordered (main_129_130_unused)
 );
 
 
-/*   %129 = fcmp olt float %125, -2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_127_129 (
-	.dataa (main_preheader5_125_reg),
+/*   %131 = fcmp olt float %127, -2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_129_131 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hC0000000),
 	.clock (clk),
-	.clk_en (altfp_main_127_129_en),
-	.aeb (main_127_129_unused),
-	.aneb (main_127_129_unused),
-	.alb (altfp_compare32_1_main_127_129_out),
-	.aleb (main_127_129_unused),
-	.agb (main_127_129_unused),
-	.ageb (main_127_129_unused),
-	.unordered (main_127_129_unused)
+	.clk_en (altfp_main_129_131_en),
+	.aeb (main_129_131_unused),
+	.aneb (main_129_131_unused),
+	.alb (altfp_compare32_1_main_129_131_out),
+	.aleb (main_129_131_unused),
+	.agb (main_129_131_unused),
+	.ageb (main_129_131_unused),
+	.unordered (main_129_131_unused)
 );
 
 
-/*   %131 = fcmp oge float %125, -2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_130_131 (
-	.dataa (main_preheader5_125_reg),
+/*   %133 = fcmp oge float %127, -2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_132_133 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hC0000000),
 	.clock (clk),
-	.clk_en (altfp_main_130_131_en),
-	.aeb (main_130_131_unused),
-	.aneb (main_130_131_unused),
-	.alb (main_130_131_unused),
-	.aleb (main_130_131_unused),
-	.agb (main_130_131_unused),
-	.ageb (altfp_compare32_1_main_130_131_out),
-	.unordered (main_130_131_unused)
+	.clk_en (altfp_main_132_133_en),
+	.aeb (main_132_133_unused),
+	.aneb (main_132_133_unused),
+	.alb (main_132_133_unused),
+	.aleb (main_132_133_unused),
+	.agb (main_132_133_unused),
+	.ageb (altfp_compare32_1_main_132_133_out),
+	.unordered (main_132_133_unused)
 );
 
 
-/*   %132 = fcmp olt float %125, -1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_130_132 (
-	.dataa (main_preheader5_125_reg),
+/*   %134 = fcmp olt float %127, -1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_132_134 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hBFC00000),
 	.clock (clk),
-	.clk_en (altfp_main_130_132_en),
-	.aeb (main_130_132_unused),
-	.aneb (main_130_132_unused),
-	.alb (altfp_compare32_1_main_130_132_out),
-	.aleb (main_130_132_unused),
-	.agb (main_130_132_unused),
-	.ageb (main_130_132_unused),
-	.unordered (main_130_132_unused)
+	.clk_en (altfp_main_132_134_en),
+	.aeb (main_132_134_unused),
+	.aneb (main_132_134_unused),
+	.alb (altfp_compare32_1_main_132_134_out),
+	.aleb (main_132_134_unused),
+	.agb (main_132_134_unused),
+	.ageb (main_132_134_unused),
+	.unordered (main_132_134_unused)
 );
 
 
-/*   %134 = fcmp oge float %125, -1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_133_134 (
-	.dataa (main_preheader5_125_reg),
+/*   %136 = fcmp oge float %127, -1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_135_136 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hBFC00000),
 	.clock (clk),
-	.clk_en (altfp_main_133_134_en),
-	.aeb (main_133_134_unused),
-	.aneb (main_133_134_unused),
-	.alb (main_133_134_unused),
-	.aleb (main_133_134_unused),
-	.agb (main_133_134_unused),
-	.ageb (altfp_compare32_1_main_133_134_out),
-	.unordered (main_133_134_unused)
+	.clk_en (altfp_main_135_136_en),
+	.aeb (main_135_136_unused),
+	.aneb (main_135_136_unused),
+	.alb (main_135_136_unused),
+	.aleb (main_135_136_unused),
+	.agb (main_135_136_unused),
+	.ageb (altfp_compare32_1_main_135_136_out),
+	.unordered (main_135_136_unused)
 );
 
 
-/*   %135 = fcmp olt float %125, -1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_133_135 (
-	.dataa (main_preheader5_125_reg),
+/*   %137 = fcmp olt float %127, -1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_135_137 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hBF800000),
 	.clock (clk),
-	.clk_en (altfp_main_133_135_en),
-	.aeb (main_133_135_unused),
-	.aneb (main_133_135_unused),
-	.alb (altfp_compare32_1_main_133_135_out),
-	.aleb (main_133_135_unused),
-	.agb (main_133_135_unused),
-	.ageb (main_133_135_unused),
-	.unordered (main_133_135_unused)
+	.clk_en (altfp_main_135_137_en),
+	.aeb (main_135_137_unused),
+	.aneb (main_135_137_unused),
+	.alb (altfp_compare32_1_main_135_137_out),
+	.aleb (main_135_137_unused),
+	.agb (main_135_137_unused),
+	.ageb (main_135_137_unused),
+	.unordered (main_135_137_unused)
 );
 
 
-/*   %137 = fcmp oge float %125, -1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_136_137 (
-	.dataa (main_preheader5_125_reg),
+/*   %139 = fcmp oge float %127, -1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_138_139 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hBF800000),
 	.clock (clk),
-	.clk_en (altfp_main_136_137_en),
-	.aeb (main_136_137_unused),
-	.aneb (main_136_137_unused),
-	.alb (main_136_137_unused),
-	.aleb (main_136_137_unused),
-	.agb (main_136_137_unused),
-	.ageb (altfp_compare32_1_main_136_137_out),
-	.unordered (main_136_137_unused)
+	.clk_en (altfp_main_138_139_en),
+	.aeb (main_138_139_unused),
+	.aneb (main_138_139_unused),
+	.alb (main_138_139_unused),
+	.aleb (main_138_139_unused),
+	.agb (main_138_139_unused),
+	.ageb (altfp_compare32_1_main_138_139_out),
+	.unordered (main_138_139_unused)
 );
 
 
-/*   %138 = fcmp olt float %125, -5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_136_138 (
-	.dataa (main_preheader5_125_reg),
+/*   %140 = fcmp olt float %127, -5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_138_140 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hBF000000),
 	.clock (clk),
-	.clk_en (altfp_main_136_138_en),
-	.aeb (main_136_138_unused),
-	.aneb (main_136_138_unused),
-	.alb (altfp_compare32_1_main_136_138_out),
-	.aleb (main_136_138_unused),
-	.agb (main_136_138_unused),
-	.ageb (main_136_138_unused),
-	.unordered (main_136_138_unused)
+	.clk_en (altfp_main_138_140_en),
+	.aeb (main_138_140_unused),
+	.aneb (main_138_140_unused),
+	.alb (altfp_compare32_1_main_138_140_out),
+	.aleb (main_138_140_unused),
+	.agb (main_138_140_unused),
+	.ageb (main_138_140_unused),
+	.unordered (main_138_140_unused)
 );
 
 
-/*   %140 = fcmp oge float %125, -5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_139_140 (
-	.dataa (main_preheader5_125_reg),
+/*   %142 = fcmp oge float %127, -5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_141_142 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'hBF000000),
 	.clock (clk),
-	.clk_en (altfp_main_139_140_en),
-	.aeb (main_139_140_unused),
-	.aneb (main_139_140_unused),
-	.alb (main_139_140_unused),
-	.aleb (main_139_140_unused),
-	.agb (main_139_140_unused),
-	.ageb (altfp_compare32_1_main_139_140_out),
-	.unordered (main_139_140_unused)
+	.clk_en (altfp_main_141_142_en),
+	.aeb (main_141_142_unused),
+	.aneb (main_141_142_unused),
+	.alb (main_141_142_unused),
+	.aleb (main_141_142_unused),
+	.agb (main_141_142_unused),
+	.ageb (altfp_compare32_1_main_141_142_out),
+	.unordered (main_141_142_unused)
 );
 
 
-/*   %141 = fcmp olt float %125, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_139_141 (
-	.dataa (main_preheader5_125_reg),
+/*   %143 = fcmp olt float %127, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_141_143 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_139_141_en),
-	.aeb (main_139_141_unused),
-	.aneb (main_139_141_unused),
-	.alb (altfp_compare32_1_main_139_141_out),
-	.aleb (main_139_141_unused),
-	.agb (main_139_141_unused),
-	.ageb (main_139_141_unused),
-	.unordered (main_139_141_unused)
+	.clk_en (altfp_main_141_143_en),
+	.aeb (main_141_143_unused),
+	.aneb (main_141_143_unused),
+	.alb (altfp_compare32_1_main_141_143_out),
+	.aleb (main_141_143_unused),
+	.agb (main_141_143_unused),
+	.ageb (main_141_143_unused),
+	.unordered (main_141_143_unused)
 );
 
 
-/*   %143 = fcmp oge float %125, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_142_143 (
-	.dataa (main_preheader5_125_reg),
+/*   %145 = fcmp oge float %127, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_144_145 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_142_143_en),
-	.aeb (main_142_143_unused),
-	.aneb (main_142_143_unused),
-	.alb (main_142_143_unused),
-	.aleb (main_142_143_unused),
-	.agb (main_142_143_unused),
-	.ageb (altfp_compare32_1_main_142_143_out),
-	.unordered (main_142_143_unused)
+	.clk_en (altfp_main_144_145_en),
+	.aeb (main_144_145_unused),
+	.aneb (main_144_145_unused),
+	.alb (main_144_145_unused),
+	.aleb (main_144_145_unused),
+	.agb (main_144_145_unused),
+	.ageb (altfp_compare32_1_main_144_145_out),
+	.unordered (main_144_145_unused)
 );
 
 
-/*   %144 = fcmp olt float %125, 5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_142_144 (
-	.dataa (main_preheader5_125_reg),
+/*   %146 = fcmp olt float %127, 5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_144_146 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h3F000000),
 	.clock (clk),
-	.clk_en (altfp_main_142_144_en),
-	.aeb (main_142_144_unused),
-	.aneb (main_142_144_unused),
-	.alb (altfp_compare32_1_main_142_144_out),
-	.aleb (main_142_144_unused),
-	.agb (main_142_144_unused),
-	.ageb (main_142_144_unused),
-	.unordered (main_142_144_unused)
+	.clk_en (altfp_main_144_146_en),
+	.aeb (main_144_146_unused),
+	.aneb (main_144_146_unused),
+	.alb (altfp_compare32_1_main_144_146_out),
+	.aleb (main_144_146_unused),
+	.agb (main_144_146_unused),
+	.ageb (main_144_146_unused),
+	.unordered (main_144_146_unused)
 );
 
 
-/*   %146 = fcmp oge float %125, 5.000000e-01*/
-altfp_compare32_1 altfp_compare32_1_main_145_146 (
-	.dataa (main_preheader5_125_reg),
+/*   %148 = fcmp oge float %127, 5.000000e-01*/
+altfp_compare32_1 altfp_compare32_1_main_147_148 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h3F000000),
 	.clock (clk),
-	.clk_en (altfp_main_145_146_en),
-	.aeb (main_145_146_unused),
-	.aneb (main_145_146_unused),
-	.alb (main_145_146_unused),
-	.aleb (main_145_146_unused),
-	.agb (main_145_146_unused),
-	.ageb (altfp_compare32_1_main_145_146_out),
-	.unordered (main_145_146_unused)
+	.clk_en (altfp_main_147_148_en),
+	.aeb (main_147_148_unused),
+	.aneb (main_147_148_unused),
+	.alb (main_147_148_unused),
+	.aleb (main_147_148_unused),
+	.agb (main_147_148_unused),
+	.ageb (altfp_compare32_1_main_147_148_out),
+	.unordered (main_147_148_unused)
 );
 
 
-/*   %147 = fcmp olt float %125, 1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_145_147 (
-	.dataa (main_preheader5_125_reg),
+/*   %149 = fcmp olt float %127, 1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_147_149 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h3F800000),
 	.clock (clk),
-	.clk_en (altfp_main_145_147_en),
-	.aeb (main_145_147_unused),
-	.aneb (main_145_147_unused),
-	.alb (altfp_compare32_1_main_145_147_out),
-	.aleb (main_145_147_unused),
-	.agb (main_145_147_unused),
-	.ageb (main_145_147_unused),
-	.unordered (main_145_147_unused)
+	.clk_en (altfp_main_147_149_en),
+	.aeb (main_147_149_unused),
+	.aneb (main_147_149_unused),
+	.alb (altfp_compare32_1_main_147_149_out),
+	.aleb (main_147_149_unused),
+	.agb (main_147_149_unused),
+	.ageb (main_147_149_unused),
+	.unordered (main_147_149_unused)
 );
 
 
-/*   %149 = fcmp oge float %125, 1.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_148_149 (
-	.dataa (main_preheader5_125_reg),
+/*   %151 = fcmp oge float %127, 1.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_150_151 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h3F800000),
 	.clock (clk),
-	.clk_en (altfp_main_148_149_en),
-	.aeb (main_148_149_unused),
-	.aneb (main_148_149_unused),
-	.alb (main_148_149_unused),
-	.aleb (main_148_149_unused),
-	.agb (main_148_149_unused),
-	.ageb (altfp_compare32_1_main_148_149_out),
-	.unordered (main_148_149_unused)
+	.clk_en (altfp_main_150_151_en),
+	.aeb (main_150_151_unused),
+	.aneb (main_150_151_unused),
+	.alb (main_150_151_unused),
+	.aleb (main_150_151_unused),
+	.agb (main_150_151_unused),
+	.ageb (altfp_compare32_1_main_150_151_out),
+	.unordered (main_150_151_unused)
 );
 
 
-/*   %150 = fcmp olt float %125, 1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_148_150 (
-	.dataa (main_preheader5_125_reg),
+/*   %152 = fcmp olt float %127, 1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_150_152 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h3FC00000),
 	.clock (clk),
-	.clk_en (altfp_main_148_150_en),
-	.aeb (main_148_150_unused),
-	.aneb (main_148_150_unused),
-	.alb (altfp_compare32_1_main_148_150_out),
-	.aleb (main_148_150_unused),
-	.agb (main_148_150_unused),
-	.ageb (main_148_150_unused),
-	.unordered (main_148_150_unused)
+	.clk_en (altfp_main_150_152_en),
+	.aeb (main_150_152_unused),
+	.aneb (main_150_152_unused),
+	.alb (altfp_compare32_1_main_150_152_out),
+	.aleb (main_150_152_unused),
+	.agb (main_150_152_unused),
+	.ageb (main_150_152_unused),
+	.unordered (main_150_152_unused)
 );
 
 
-/*   %152 = fcmp oge float %125, 1.500000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_151_152 (
-	.dataa (main_preheader5_125_reg),
+/*   %154 = fcmp oge float %127, 1.500000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_153_154 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h3FC00000),
 	.clock (clk),
-	.clk_en (altfp_main_151_152_en),
-	.aeb (main_151_152_unused),
-	.aneb (main_151_152_unused),
-	.alb (main_151_152_unused),
-	.aleb (main_151_152_unused),
-	.agb (main_151_152_unused),
-	.ageb (altfp_compare32_1_main_151_152_out),
-	.unordered (main_151_152_unused)
+	.clk_en (altfp_main_153_154_en),
+	.aeb (main_153_154_unused),
+	.aneb (main_153_154_unused),
+	.alb (main_153_154_unused),
+	.aleb (main_153_154_unused),
+	.agb (main_153_154_unused),
+	.ageb (altfp_compare32_1_main_153_154_out),
+	.unordered (main_153_154_unused)
 );
 
 
-/*   %153 = fcmp olt float %125, 2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_151_153 (
-	.dataa (main_preheader5_125_reg),
+/*   %155 = fcmp olt float %127, 2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_153_155 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h40000000),
 	.clock (clk),
-	.clk_en (altfp_main_151_153_en),
-	.aeb (main_151_153_unused),
-	.aneb (main_151_153_unused),
-	.alb (altfp_compare32_1_main_151_153_out),
-	.aleb (main_151_153_unused),
-	.agb (main_151_153_unused),
-	.ageb (main_151_153_unused),
-	.unordered (main_151_153_unused)
+	.clk_en (altfp_main_153_155_en),
+	.aeb (main_153_155_unused),
+	.aneb (main_153_155_unused),
+	.alb (altfp_compare32_1_main_153_155_out),
+	.aleb (main_153_155_unused),
+	.agb (main_153_155_unused),
+	.ageb (main_153_155_unused),
+	.unordered (main_153_155_unused)
 );
 
 
-/*   %155 = fcmp oge float %125, 2.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_154_155 (
-	.dataa (main_preheader5_125_reg),
+/*   %157 = fcmp oge float %127, 2.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_156_157 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h40000000),
 	.clock (clk),
-	.clk_en (altfp_main_154_155_en),
-	.aeb (main_154_155_unused),
-	.aneb (main_154_155_unused),
-	.alb (main_154_155_unused),
-	.aleb (main_154_155_unused),
-	.agb (main_154_155_unused),
-	.ageb (altfp_compare32_1_main_154_155_out),
-	.unordered (main_154_155_unused)
+	.clk_en (altfp_main_156_157_en),
+	.aeb (main_156_157_unused),
+	.aneb (main_156_157_unused),
+	.alb (main_156_157_unused),
+	.aleb (main_156_157_unused),
+	.agb (main_156_157_unused),
+	.ageb (altfp_compare32_1_main_156_157_out),
+	.unordered (main_156_157_unused)
 );
 
 
-/*   %156 = fcmp olt float %125, 3.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_154_156 (
-	.dataa (main_preheader5_125_reg),
+/*   %158 = fcmp olt float %127, 3.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_156_158 (
+	.dataa (main_preheader1_127_reg),
 	.datab (32'h40400000),
 	.clock (clk),
-	.clk_en (altfp_main_154_156_en),
-	.aeb (main_154_156_unused),
-	.aneb (main_154_156_unused),
-	.alb (altfp_compare32_1_main_154_156_out),
-	.aleb (main_154_156_unused),
-	.agb (main_154_156_unused),
-	.ageb (main_154_156_unused),
-	.unordered (main_154_156_unused)
+	.clk_en (altfp_main_156_158_en),
+	.aeb (main_156_158_unused),
+	.aneb (main_156_158_unused),
+	.alb (altfp_compare32_1_main_156_158_out),
+	.aleb (main_156_158_unused),
+	.agb (main_156_158_unused),
+	.ageb (main_156_158_unused),
+	.unordered (main_156_158_unused)
 );
 
 
-/*   %173 = fcmp ogt float %172, 0.000000e+00*/
-altfp_compare32_1 altfp_compare32_1_main_rotateexiti_173 (
-	.dataa (main_rotateexiti_172),
+/*   %176 = fcmp ogt float %175, 0.000000e+00*/
+altfp_compare32_1 altfp_compare32_1_main_rotateexiti_176 (
+	.dataa (main_rotateexiti_175),
 	.datab (32'h0),
 	.clock (clk),
-	.clk_en (altfp_main_rotateexiti_173_en),
-	.aeb (main_rotateexiti_173_unused),
-	.aneb (main_rotateexiti_173_unused),
-	.alb (main_rotateexiti_173_unused),
-	.aleb (main_rotateexiti_173_unused),
-	.agb (altfp_compare32_1_main_rotateexiti_173_out),
-	.ageb (main_rotateexiti_173_unused),
-	.unordered (main_rotateexiti_173_unused)
+	.clk_en (altfp_main_rotateexiti_176_en),
+	.aeb (main_rotateexiti_176_unused),
+	.aneb (main_rotateexiti_176_unused),
+	.alb (main_rotateexiti_176_unused),
+	.aleb (main_rotateexiti_176_unused),
+	.agb (altfp_compare32_1_main_rotateexiti_176_out),
+	.ageb (main_rotateexiti_176_unused),
+	.unordered (main_rotateexiti_176_unused)
 );
 
 
-/*   %174 = fcmp olt float %172, 2.000000e+01*/
-altfp_compare32_1 altfp_compare32_1_main_rotateexiti_174 (
-	.dataa (main_rotateexiti_172),
+/*   %177 = fcmp olt float %175, 2.000000e+01*/
+altfp_compare32_1 altfp_compare32_1_main_rotateexiti_177 (
+	.dataa (main_rotateexiti_175),
 	.datab (32'h41A00000),
 	.clock (clk),
-	.clk_en (altfp_main_rotateexiti_174_en),
-	.aeb (main_rotateexiti_174_unused),
-	.aneb (main_rotateexiti_174_unused),
-	.alb (altfp_compare32_1_main_rotateexiti_174_out),
-	.aleb (main_rotateexiti_174_unused),
-	.agb (main_rotateexiti_174_unused),
-	.ageb (main_rotateexiti_174_unused),
-	.unordered (main_rotateexiti_174_unused)
+	.clk_en (altfp_main_rotateexiti_177_en),
+	.aeb (main_rotateexiti_177_unused),
+	.aneb (main_rotateexiti_177_unused),
+	.alb (altfp_compare32_1_main_rotateexiti_177_out),
+	.aleb (main_rotateexiti_177_unused),
+	.agb (main_rotateexiti_177_unused),
+	.ageb (main_rotateexiti_177_unused),
+	.unordered (main_rotateexiti_177_unused)
 );
 
 
-/*   %176 = fcmp oge float %172, 2.000000e+01*/
-altfp_compare32_1 altfp_compare32_1_main_175_176 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h41A00000),
-	.clock (clk),
-	.clk_en (altfp_main_175_176_en),
-	.aeb (main_175_176_unused),
-	.aneb (main_175_176_unused),
-	.alb (main_175_176_unused),
-	.aleb (main_175_176_unused),
-	.agb (main_175_176_unused),
-	.ageb (altfp_compare32_1_main_175_176_out),
-	.unordered (main_175_176_unused)
-);
-
-
-/*   %177 = fcmp olt float %172, 4.000000e+01*/
-altfp_compare32_1 altfp_compare32_1_main_175_177 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h42200000),
-	.clock (clk),
-	.clk_en (altfp_main_175_177_en),
-	.aeb (main_175_177_unused),
-	.aneb (main_175_177_unused),
-	.alb (altfp_compare32_1_main_175_177_out),
-	.aleb (main_175_177_unused),
-	.agb (main_175_177_unused),
-	.ageb (main_175_177_unused),
-	.unordered (main_175_177_unused)
-);
-
-
-/*   %179 = fcmp oge float %172, 4.000000e+01*/
+/*   %179 = fcmp oge float %175, 2.000000e+01*/
 altfp_compare32_1 altfp_compare32_1_main_178_179 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h42200000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h41A00000),
 	.clock (clk),
 	.clk_en (altfp_main_178_179_en),
 	.aeb (main_178_179_unused),
@@ -2836,10 +2727,10 @@ altfp_compare32_1 altfp_compare32_1_main_178_179 (
 );
 
 
-/*   %180 = fcmp olt float %172, 7.500000e+01*/
+/*   %180 = fcmp olt float %175, 4.000000e+01*/
 altfp_compare32_1 altfp_compare32_1_main_178_180 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h42960000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h42200000),
 	.clock (clk),
 	.clk_en (altfp_main_178_180_en),
 	.aeb (main_178_180_unused),
@@ -2852,10 +2743,10 @@ altfp_compare32_1 altfp_compare32_1_main_178_180 (
 );
 
 
-/*   %182 = fcmp oge float %172, 7.500000e+01*/
+/*   %182 = fcmp oge float %175, 4.000000e+01*/
 altfp_compare32_1 altfp_compare32_1_main_181_182 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h42960000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h42200000),
 	.clock (clk),
 	.clk_en (altfp_main_181_182_en),
 	.aeb (main_181_182_unused),
@@ -2868,10 +2759,10 @@ altfp_compare32_1 altfp_compare32_1_main_181_182 (
 );
 
 
-/*   %183 = fcmp olt float %172, 1.500000e+02*/
+/*   %183 = fcmp olt float %175, 7.500000e+01*/
 altfp_compare32_1 altfp_compare32_1_main_181_183 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h43160000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h42960000),
 	.clock (clk),
 	.clk_en (altfp_main_181_183_en),
 	.aeb (main_181_183_unused),
@@ -2884,10 +2775,10 @@ altfp_compare32_1 altfp_compare32_1_main_181_183 (
 );
 
 
-/*   %185 = fcmp oge float %172, 1.500000e+02*/
+/*   %185 = fcmp oge float %175, 7.500000e+01*/
 altfp_compare32_1 altfp_compare32_1_main_184_185 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h43160000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h42960000),
 	.clock (clk),
 	.clk_en (altfp_main_184_185_en),
 	.aeb (main_184_185_unused),
@@ -2900,10 +2791,10 @@ altfp_compare32_1 altfp_compare32_1_main_184_185 (
 );
 
 
-/*   %186 = fcmp olt float %172, 2.500000e+02*/
+/*   %186 = fcmp olt float %175, 1.500000e+02*/
 altfp_compare32_1 altfp_compare32_1_main_184_186 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h437A0000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h43160000),
 	.clock (clk),
 	.clk_en (altfp_main_184_186_en),
 	.aeb (main_184_186_unused),
@@ -2916,10 +2807,10 @@ altfp_compare32_1 altfp_compare32_1_main_184_186 (
 );
 
 
-/*   %188 = fcmp oge float %172, 2.500000e+02*/
+/*   %188 = fcmp oge float %175, 1.500000e+02*/
 altfp_compare32_1 altfp_compare32_1_main_187_188 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h437A0000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h43160000),
 	.clock (clk),
 	.clk_en (altfp_main_187_188_en),
 	.aeb (main_187_188_unused),
@@ -2932,10 +2823,10 @@ altfp_compare32_1 altfp_compare32_1_main_187_188 (
 );
 
 
-/*   %189 = fcmp olt float %172, 5.000000e+02*/
+/*   %189 = fcmp olt float %175, 2.500000e+02*/
 altfp_compare32_1 altfp_compare32_1_main_187_189 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h43FA0000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h437A0000),
 	.clock (clk),
 	.clk_en (altfp_main_187_189_en),
 	.aeb (main_187_189_unused),
@@ -2948,10 +2839,10 @@ altfp_compare32_1 altfp_compare32_1_main_187_189 (
 );
 
 
-/*   %191 = fcmp oge float %172, 5.000000e+02*/
+/*   %191 = fcmp oge float %175, 2.500000e+02*/
 altfp_compare32_1 altfp_compare32_1_main_190_191 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h43FA0000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h437A0000),
 	.clock (clk),
 	.clk_en (altfp_main_190_191_en),
 	.aeb (main_190_191_unused),
@@ -2964,10 +2855,10 @@ altfp_compare32_1 altfp_compare32_1_main_190_191 (
 );
 
 
-/*   %192 = fcmp olt float %172, 1.000000e+03*/
+/*   %192 = fcmp olt float %175, 5.000000e+02*/
 altfp_compare32_1 altfp_compare32_1_main_190_192 (
-	.dataa (main_rotateexiti_172_reg),
-	.datab (32'h447A0000),
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h43FA0000),
 	.clock (clk),
 	.clk_en (altfp_main_190_192_en),
 	.aeb (main_190_192_unused),
@@ -2980,29 +2871,49 @@ altfp_compare32_1 altfp_compare32_1_main_190_192 (
 );
 
 
+/*   %194 = fcmp oge float %175, 5.000000e+02*/
+altfp_compare32_1 altfp_compare32_1_main_193_194 (
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h43FA0000),
+	.clock (clk),
+	.clk_en (altfp_main_193_194_en),
+	.aeb (main_193_194_unused),
+	.aneb (main_193_194_unused),
+	.alb (main_193_194_unused),
+	.aleb (main_193_194_unused),
+	.agb (main_193_194_unused),
+	.ageb (altfp_compare32_1_main_193_194_out),
+	.unordered (main_193_194_unused)
+);
+
+
+/*   %195 = fcmp olt float %175, 1.000000e+03*/
+altfp_compare32_1 altfp_compare32_1_main_193_195 (
+	.dataa (main_rotateexiti_175_reg),
+	.datab (32'h447A0000),
+	.clock (clk),
+	.clk_en (altfp_main_193_195_en),
+	.aeb (main_193_195_unused),
+	.aneb (main_193_195_unused),
+	.alb (altfp_compare32_1_main_193_195_out),
+	.aleb (main_193_195_unused),
+	.agb (main_193_195_unused),
+	.ageb (main_193_195_unused),
+	.unordered (main_193_195_unused)
+);
+
+
 
 /* Unsynthesizable Statements */
 always @(posedge clk)
 	if (!memory_controller_waitrequest) begin
-	/* main: %30*/
-	/*   %31 = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([16 x i8]* @.str, i32 0, i32 0), i32 %2) #1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		$write("iteration %d :\n", $signed(main_1_2_reg));
-		// to fix quartus warning
-		if (reset == 1'b0 && ^(main_1_2_reg) === 1'bX) finish <= 0;
-	end
-	/* main: %198*/
-	/*   %199 = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([22 x i8]* @.str1, i32 0, i32 0)) #1*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
-		$write("too many iterations!\n");
-	end
 	/* main: %fastica.exit*/
-	/*   %204 = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([34 x i8]* @.str2, i32 0, i32 0), i32 %203, i32 %202) #1*/
-	if ((cur_state == LEGUP_F_main_BB_fasticaexit_554)) begin
-		$write("The unmixing vector is : [%d %d]\n", main_fasticaexit_203_reg, main_fasticaexit_202_reg);
+	/*   %200 = tail call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([34 x i8]* @.str, i32 0, i32 0), i32 %3, i32 %2) #1*/
+	if ((cur_state == LEGUP_F_main_BB_fasticaexit_546)) begin
+		$write("The unmixing vector is : [%d %d]\n", main_1_3_reg, main_1_2_reg);
 		// to fix quartus warning
-		if (reset == 1'b0 && ^(main_fasticaexit_203_reg) === 1'bX) finish <= 0;
-		if (reset == 1'b0 && ^(main_fasticaexit_202_reg) === 1'bX) finish <= 0;
+		if (reset == 1'b0 && ^(main_1_3_reg) === 1'bX) finish <= 0;
+		if (reset == 1'b0 && ^(main_1_2_reg) === 1'bX) finish <= 0;
 	end
 end
 always @(posedge clk) begin
@@ -3020,264 +2931,231 @@ next_state = cur_state;
 case(cur_state)  // synthesis parallel_case  
 LEGUP_0:
 	if ((start == 1'd1))
-		next_state = LEGUP_F_main_BB__0_1;
-LEGUP_F_main_BB__0_1:
-		next_state = LEGUP_F_main_BB__0_2;
-LEGUP_F_main_BB__0_2:
-		next_state = LEGUP_F_main_BB__0_3;
-LEGUP_F_main_BB__0_3:
-		next_state = LEGUP_F_main_BB__1_4;
-LEGUP_F_main_BB__101_295:
-		next_state = LEGUP_F_main_BB__101_296;
-LEGUP_F_main_BB__101_296:
-	if ((main_101_orcond15i7ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_101_orcond15i7ii == 1'd0))
-		next_state = LEGUP_F_main_BB__104_297;
-LEGUP_F_main_BB__104_297:
-		next_state = LEGUP_F_main_BB__104_298;
-LEGUP_F_main_BB__104_298:
-	if ((main_104_orcond16iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_104_orcond16iii == 1'd0))
-		next_state = LEGUP_F_main_BB__107_299;
-LEGUP_F_main_BB__107_299:
-		next_state = LEGUP_F_main_BB__107_300;
-LEGUP_F_main_BB__107_300:
-	if ((main_107_orcond7i8ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_107_orcond7i8ii == 1'd0))
-		next_state = LEGUP_F_main_BB__110_301;
-LEGUP_F_main_BB__10_60:
-		next_state = LEGUP_F_main_BB__10_61;
-LEGUP_F_main_BB__10_61:
-		next_state = LEGUP_F_main_BB__10_62;
-LEGUP_F_main_BB__10_62:
-		next_state = LEGUP_F_main_BB__10_63;
-LEGUP_F_main_BB__10_63:
-		next_state = LEGUP_F_main_BB__10_64;
-LEGUP_F_main_BB__10_64:
-		next_state = LEGUP_F_main_BB__10_65;
-LEGUP_F_main_BB__10_65:
-		next_state = LEGUP_F_main_BB__10_66;
-LEGUP_F_main_BB__10_66:
-		next_state = LEGUP_F_main_BB__10_67;
-LEGUP_F_main_BB__10_67:
-		next_state = LEGUP_F_main_BB__10_68;
-LEGUP_F_main_BB__10_68:
-		next_state = LEGUP_F_main_BB__10_69;
-LEGUP_F_main_BB__10_69:
-		next_state = LEGUP_F_main_BB__10_70;
-LEGUP_F_main_BB__10_70:
-		next_state = LEGUP_F_main_BB__10_71;
-LEGUP_F_main_BB__10_71:
-		next_state = LEGUP_F_main_BB__10_72;
-LEGUP_F_main_BB__10_72:
-		next_state = LEGUP_F_main_BB__10_73;
-LEGUP_F_main_BB__10_73:
-		next_state = LEGUP_F_main_BB__10_74;
-LEGUP_F_main_BB__10_74:
-		next_state = LEGUP_F_main_BB__10_75;
-LEGUP_F_main_BB__10_75:
-	if ((main_10_13 == 1'd1))
-		next_state = LEGUP_F_main_BB__14_76;
-	else if ((main_10_13 == 1'd0))
-		next_state = LEGUP_F_main_BB__20_107;
-LEGUP_F_main_BB__110_301:
-		next_state = LEGUP_F_main_BB__110_302;
-LEGUP_F_main_BB__110_302:
-	if ((main_110_orcond17iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_110_orcond17iii == 1'd0))
-		next_state = LEGUP_F_main_BB__113_303;
-LEGUP_F_main_BB__113_303:
-		next_state = LEGUP_F_main_BB__113_304;
-LEGUP_F_main_BB__113_304:
-	if ((main_113_orcond9i9ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_113_orcond9i9ii == 1'd0))
-		next_state = LEGUP_F_main_BB__116_305;
-LEGUP_F_main_BB__116_305:
-		next_state = LEGUP_F_main_BB__116_306;
-LEGUP_F_main_BB__116_306:
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-LEGUP_F_main_BB__127_351:
-		next_state = LEGUP_F_main_BB__127_352;
-LEGUP_F_main_BB__127_352:
-	if ((main_127_orcondi1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_127_orcondi1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__130_353;
-LEGUP_F_main_BB__130_353:
-		next_state = LEGUP_F_main_BB__130_354;
-LEGUP_F_main_BB__130_354:
-	if ((main_130_orcond12i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_130_orcond12i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__133_355;
-LEGUP_F_main_BB__133_355:
-		next_state = LEGUP_F_main_BB__133_356;
-LEGUP_F_main_BB__133_356:
-	if ((main_133_orcond3i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_133_orcond3i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__136_357;
-LEGUP_F_main_BB__136_357:
-		next_state = LEGUP_F_main_BB__136_358;
-LEGUP_F_main_BB__136_358:
-	if ((main_136_orcond13i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_136_orcond13i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__139_359;
-LEGUP_F_main_BB__139_359:
-		next_state = LEGUP_F_main_BB__139_360;
-LEGUP_F_main_BB__139_360:
-	if ((main_139_orcond5i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_139_orcond5i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__142_361;
-LEGUP_F_main_BB__142_361:
-		next_state = LEGUP_F_main_BB__142_362;
-LEGUP_F_main_BB__142_362:
-	if ((main_142_orcond14i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_142_orcond14i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__145_363;
-LEGUP_F_main_BB__145_363:
-		next_state = LEGUP_F_main_BB__145_364;
-LEGUP_F_main_BB__145_364:
-	if ((main_145_orcond7i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_145_orcond7i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__148_365;
-LEGUP_F_main_BB__148_365:
-		next_state = LEGUP_F_main_BB__148_366;
-LEGUP_F_main_BB__148_366:
-	if ((main_148_orcond15i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_148_orcond15i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__151_367;
-LEGUP_F_main_BB__14_76:
-	if ((main_1_7_reg == 1'd1))
-		next_state = LEGUP_F_main_BB__17_92;
-	else if ((main_1_7_reg == 1'd0))
-		next_state = LEGUP_F_main_BB__15_77;
-LEGUP_F_main_BB__151_367:
-		next_state = LEGUP_F_main_BB__151_368;
-LEGUP_F_main_BB__151_368:
-	if ((main_151_orcond9i1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_151_orcond9i1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__154_369;
-LEGUP_F_main_BB__154_369:
-		next_state = LEGUP_F_main_BB__154_370;
-LEGUP_F_main_BB__154_370:
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-LEGUP_F_main_BB__15_77:
-		next_state = LEGUP_F_main_BB__15_78;
-LEGUP_F_main_BB__15_78:
-		next_state = LEGUP_F_main_BB__15_79;
-LEGUP_F_main_BB__15_79:
-		next_state = LEGUP_F_main_BB__15_80;
-LEGUP_F_main_BB__15_80:
-		next_state = LEGUP_F_main_BB__15_81;
-LEGUP_F_main_BB__15_81:
-		next_state = LEGUP_F_main_BB__15_82;
-LEGUP_F_main_BB__15_82:
-		next_state = LEGUP_F_main_BB__15_83;
-LEGUP_F_main_BB__15_83:
-		next_state = LEGUP_F_main_BB__15_84;
-LEGUP_F_main_BB__15_84:
-		next_state = LEGUP_F_main_BB__15_85;
-LEGUP_F_main_BB__15_85:
-		next_state = LEGUP_F_main_BB__15_86;
-LEGUP_F_main_BB__15_86:
-		next_state = LEGUP_F_main_BB__15_87;
-LEGUP_F_main_BB__15_87:
-		next_state = LEGUP_F_main_BB__15_88;
-LEGUP_F_main_BB__15_88:
-		next_state = LEGUP_F_main_BB__15_89;
-LEGUP_F_main_BB__15_89:
-		next_state = LEGUP_F_main_BB__15_90;
-LEGUP_F_main_BB__15_90:
-		next_state = LEGUP_F_main_BB__15_91;
-LEGUP_F_main_BB__15_91:
-		next_state = LEGUP_F_main_BB__17_92;
-LEGUP_F_main_BB__175_500:
-		next_state = LEGUP_F_main_BB__175_501;
-LEGUP_F_main_BB__175_501:
-	if ((main_175_orcond3iiii == 1'd1))
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
-	else if ((main_175_orcond3iiii == 1'd0))
-		next_state = LEGUP_F_main_BB__178_502;
-LEGUP_F_main_BB__178_502:
-		next_state = LEGUP_F_main_BB__178_503;
-LEGUP_F_main_BB__178_503:
-	if ((main_178_orcond5iiii == 1'd1))
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
-	else if ((main_178_orcond5iiii == 1'd0))
-		next_state = LEGUP_F_main_BB__181_504;
-LEGUP_F_main_BB__17_100:
-		next_state = LEGUP_F_main_BB__17_101;
-LEGUP_F_main_BB__17_101:
-		next_state = LEGUP_F_main_BB__17_102;
-LEGUP_F_main_BB__17_102:
-		next_state = LEGUP_F_main_BB__17_103;
-LEGUP_F_main_BB__17_103:
-		next_state = LEGUP_F_main_BB__17_104;
-LEGUP_F_main_BB__17_104:
-		next_state = LEGUP_F_main_BB__17_105;
-LEGUP_F_main_BB__17_105:
-		next_state = LEGUP_F_main_BB__17_106;
-LEGUP_F_main_BB__17_106:
-		next_state = LEGUP_F_main_BB_convergedexiti_152;
-LEGUP_F_main_BB__17_92:
-		next_state = LEGUP_F_main_BB__17_93;
-LEGUP_F_main_BB__17_93:
-		next_state = LEGUP_F_main_BB__17_94;
-LEGUP_F_main_BB__17_94:
-		next_state = LEGUP_F_main_BB__17_95;
-LEGUP_F_main_BB__17_95:
-		next_state = LEGUP_F_main_BB__17_96;
-LEGUP_F_main_BB__17_96:
-		next_state = LEGUP_F_main_BB__17_97;
-LEGUP_F_main_BB__17_97:
-		next_state = LEGUP_F_main_BB__17_98;
-LEGUP_F_main_BB__17_98:
-		next_state = LEGUP_F_main_BB__17_99;
-LEGUP_F_main_BB__17_99:
-		next_state = LEGUP_F_main_BB__17_100;
-LEGUP_F_main_BB__181_504:
-		next_state = LEGUP_F_main_BB__181_505;
-LEGUP_F_main_BB__181_505:
-	if ((main_181_orcond7iiii == 1'd1))
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
-	else if ((main_181_orcond7iiii == 1'd0))
-		next_state = LEGUP_F_main_BB__184_506;
-LEGUP_F_main_BB__184_506:
-		next_state = LEGUP_F_main_BB__184_507;
-LEGUP_F_main_BB__184_507:
-	if ((main_184_orcond9iiii == 1'd1))
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
-	else if ((main_184_orcond9iiii == 1'd0))
-		next_state = LEGUP_F_main_BB__187_508;
-LEGUP_F_main_BB__187_508:
-		next_state = LEGUP_F_main_BB__187_509;
-LEGUP_F_main_BB__187_509:
-	if ((main_187_orcond11iiii == 1'd1))
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
-	else if ((main_187_orcond11iiii == 1'd0))
-		next_state = LEGUP_F_main_BB__190_510;
-LEGUP_F_main_BB__190_510:
-		next_state = LEGUP_F_main_BB__190_511;
-LEGUP_F_main_BB__190_511:
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
-LEGUP_F_main_BB__198_550:
-		next_state = LEGUP_F_main_BB__198_551;
-LEGUP_F_main_BB__198_551:
-		next_state = LEGUP_F_main_BB__198_552;
-LEGUP_F_main_BB__198_552:
-		next_state = LEGUP_F_main_BB_fasticaexit_554;
+		next_state = LEGUP_F_main_BB__1_1;
+LEGUP_F_main_BB__100_289:
+		next_state = LEGUP_F_main_BB__100_290;
+LEGUP_F_main_BB__100_290:
+	if ((main_100_orcond5i6ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_100_orcond5i6ii == 1'd0))
+		next_state = LEGUP_F_main_BB__103_291;
+LEGUP_F_main_BB__103_291:
+		next_state = LEGUP_F_main_BB__103_292;
+LEGUP_F_main_BB__103_292:
+	if ((main_103_orcond15i7ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_103_orcond15i7ii == 1'd0))
+		next_state = LEGUP_F_main_BB__106_293;
+LEGUP_F_main_BB__106_293:
+		next_state = LEGUP_F_main_BB__106_294;
+LEGUP_F_main_BB__106_294:
+	if ((main_106_orcond16iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_106_orcond16iii == 1'd0))
+		next_state = LEGUP_F_main_BB__109_295;
+LEGUP_F_main_BB__109_295:
+		next_state = LEGUP_F_main_BB__109_296;
+LEGUP_F_main_BB__109_296:
+	if ((main_109_orcond7i8ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_109_orcond7i8ii == 1'd0))
+		next_state = LEGUP_F_main_BB__112_297;
+LEGUP_F_main_BB__112_297:
+		next_state = LEGUP_F_main_BB__112_298;
+LEGUP_F_main_BB__112_298:
+	if ((main_112_orcond17iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_112_orcond17iii == 1'd0))
+		next_state = LEGUP_F_main_BB__115_299;
+LEGUP_F_main_BB__115_299:
+		next_state = LEGUP_F_main_BB__115_300;
+LEGUP_F_main_BB__115_300:
+	if ((main_115_orcond9i9ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_115_orcond9i9ii == 1'd0))
+		next_state = LEGUP_F_main_BB__118_301;
+LEGUP_F_main_BB__118_301:
+		next_state = LEGUP_F_main_BB__118_302;
+LEGUP_F_main_BB__118_302:
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+LEGUP_F_main_BB__129_347:
+		next_state = LEGUP_F_main_BB__129_348;
+LEGUP_F_main_BB__129_348:
+	if ((main_129_orcondi1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_129_orcondi1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__132_349;
+LEGUP_F_main_BB__132_349:
+		next_state = LEGUP_F_main_BB__132_350;
+LEGUP_F_main_BB__132_350:
+	if ((main_132_orcond12i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_132_orcond12i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__135_351;
+LEGUP_F_main_BB__135_351:
+		next_state = LEGUP_F_main_BB__135_352;
+LEGUP_F_main_BB__135_352:
+	if ((main_135_orcond3i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_135_orcond3i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__138_353;
+LEGUP_F_main_BB__138_353:
+		next_state = LEGUP_F_main_BB__138_354;
+LEGUP_F_main_BB__138_354:
+	if ((main_138_orcond13i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_138_orcond13i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__141_355;
+LEGUP_F_main_BB__13_42:
+		next_state = LEGUP_F_main_BB__13_43;
+LEGUP_F_main_BB__13_43:
+		next_state = LEGUP_F_main_BB__13_44;
+LEGUP_F_main_BB__13_44:
+		next_state = LEGUP_F_main_BB__13_45;
+LEGUP_F_main_BB__13_45:
+		next_state = LEGUP_F_main_BB__13_46;
+LEGUP_F_main_BB__13_46:
+		next_state = LEGUP_F_main_BB__13_47;
+LEGUP_F_main_BB__13_47:
+		next_state = LEGUP_F_main_BB__13_48;
+LEGUP_F_main_BB__13_48:
+		next_state = LEGUP_F_main_BB__13_49;
+LEGUP_F_main_BB__13_49:
+		next_state = LEGUP_F_main_BB__13_50;
+LEGUP_F_main_BB__13_50:
+		next_state = LEGUP_F_main_BB__13_51;
+LEGUP_F_main_BB__13_51:
+		next_state = LEGUP_F_main_BB__13_52;
+LEGUP_F_main_BB__13_52:
+		next_state = LEGUP_F_main_BB__13_53;
+LEGUP_F_main_BB__13_53:
+		next_state = LEGUP_F_main_BB__13_54;
+LEGUP_F_main_BB__13_54:
+		next_state = LEGUP_F_main_BB__13_55;
+LEGUP_F_main_BB__13_55:
+		next_state = LEGUP_F_main_BB__13_56;
+LEGUP_F_main_BB__13_56:
+		next_state = LEGUP_F_main_BB__15_57;
+LEGUP_F_main_BB__141_355:
+		next_state = LEGUP_F_main_BB__141_356;
+LEGUP_F_main_BB__141_356:
+	if ((main_141_orcond5i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_141_orcond5i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__144_357;
+LEGUP_F_main_BB__144_357:
+		next_state = LEGUP_F_main_BB__144_358;
+LEGUP_F_main_BB__144_358:
+	if ((main_144_orcond14i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_144_orcond14i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__147_359;
+LEGUP_F_main_BB__147_359:
+		next_state = LEGUP_F_main_BB__147_360;
+LEGUP_F_main_BB__147_360:
+	if ((main_147_orcond7i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_147_orcond7i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__150_361;
+LEGUP_F_main_BB__150_361:
+		next_state = LEGUP_F_main_BB__150_362;
+LEGUP_F_main_BB__150_362:
+	if ((main_150_orcond15i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_150_orcond15i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__153_363;
+LEGUP_F_main_BB__153_363:
+		next_state = LEGUP_F_main_BB__153_364;
+LEGUP_F_main_BB__153_364:
+	if ((main_153_orcond9i1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_153_orcond9i1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__156_365;
+LEGUP_F_main_BB__156_365:
+		next_state = LEGUP_F_main_BB__156_366;
+LEGUP_F_main_BB__156_366:
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+LEGUP_F_main_BB__15_57:
+		next_state = LEGUP_F_main_BB__15_58;
+LEGUP_F_main_BB__15_58:
+		next_state = LEGUP_F_main_BB__15_59;
+LEGUP_F_main_BB__15_59:
+		next_state = LEGUP_F_main_BB__15_60;
+LEGUP_F_main_BB__15_60:
+		next_state = LEGUP_F_main_BB__15_61;
+LEGUP_F_main_BB__15_61:
+		next_state = LEGUP_F_main_BB__15_62;
+LEGUP_F_main_BB__15_62:
+		next_state = LEGUP_F_main_BB__15_63;
+LEGUP_F_main_BB__15_63:
+		next_state = LEGUP_F_main_BB__15_64;
+LEGUP_F_main_BB__15_64:
+		next_state = LEGUP_F_main_BB__15_65;
+LEGUP_F_main_BB__15_65:
+		next_state = LEGUP_F_main_BB__15_66;
+LEGUP_F_main_BB__15_66:
+		next_state = LEGUP_F_main_BB__15_67;
+LEGUP_F_main_BB__15_67:
+		next_state = LEGUP_F_main_BB__15_68;
+LEGUP_F_main_BB__15_68:
+		next_state = LEGUP_F_main_BB__15_69;
+LEGUP_F_main_BB__15_69:
+		next_state = LEGUP_F_main_BB__15_70;
+LEGUP_F_main_BB__15_70:
+		next_state = LEGUP_F_main_BB__15_71;
+LEGUP_F_main_BB__15_71:
+		next_state = LEGUP_F_main_BB__15_72;
+LEGUP_F_main_BB__15_72:
+	if ((main_15_18 == 1'd1))
+		next_state = LEGUP_F_main_BB__19_73;
+	else if ((main_15_18 == 1'd0))
+		next_state = LEGUP_F_main_BB__25_104;
+LEGUP_F_main_BB__178_496:
+		next_state = LEGUP_F_main_BB__178_497;
+LEGUP_F_main_BB__178_497:
+	if ((main_178_orcond3iiii == 1'd1))
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
+	else if ((main_178_orcond3iiii == 1'd0))
+		next_state = LEGUP_F_main_BB__181_498;
+LEGUP_F_main_BB__181_498:
+		next_state = LEGUP_F_main_BB__181_499;
+LEGUP_F_main_BB__181_499:
+	if ((main_181_orcond5iiii == 1'd1))
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
+	else if ((main_181_orcond5iiii == 1'd0))
+		next_state = LEGUP_F_main_BB__184_500;
+LEGUP_F_main_BB__184_500:
+		next_state = LEGUP_F_main_BB__184_501;
+LEGUP_F_main_BB__184_501:
+	if ((main_184_orcond7iiii == 1'd1))
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
+	else if ((main_184_orcond7iiii == 1'd0))
+		next_state = LEGUP_F_main_BB__187_502;
+LEGUP_F_main_BB__187_502:
+		next_state = LEGUP_F_main_BB__187_503;
+LEGUP_F_main_BB__187_503:
+	if ((main_187_orcond9iiii == 1'd1))
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
+	else if ((main_187_orcond9iiii == 1'd0))
+		next_state = LEGUP_F_main_BB__190_504;
+LEGUP_F_main_BB__190_504:
+		next_state = LEGUP_F_main_BB__190_505;
+LEGUP_F_main_BB__190_505:
+	if ((main_190_orcond11iiii == 1'd1))
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
+	else if ((main_190_orcond11iiii == 1'd0))
+		next_state = LEGUP_F_main_BB__193_506;
+LEGUP_F_main_BB__193_506:
+		next_state = LEGUP_F_main_BB__193_507;
+LEGUP_F_main_BB__193_507:
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
+LEGUP_F_main_BB__19_73:
+	if ((main_1_12_reg == 1'd1))
+		next_state = LEGUP_F_main_BB__22_89;
+	else if ((main_1_12_reg == 1'd0))
+		next_state = LEGUP_F_main_BB__20_74;
+LEGUP_F_main_BB__1_1:
+		next_state = LEGUP_F_main_BB__1_2;
 LEGUP_F_main_BB__1_10:
 		next_state = LEGUP_F_main_BB__1_11;
 LEGUP_F_main_BB__1_11:
@@ -3298,6 +3176,8 @@ LEGUP_F_main_BB__1_18:
 		next_state = LEGUP_F_main_BB__1_19;
 LEGUP_F_main_BB__1_19:
 		next_state = LEGUP_F_main_BB__1_20;
+LEGUP_F_main_BB__1_2:
+		next_state = LEGUP_F_main_BB__1_3;
 LEGUP_F_main_BB__1_20:
 		next_state = LEGUP_F_main_BB__1_21;
 LEGUP_F_main_BB__1_21:
@@ -3318,6 +3198,8 @@ LEGUP_F_main_BB__1_28:
 		next_state = LEGUP_F_main_BB__1_29;
 LEGUP_F_main_BB__1_29:
 		next_state = LEGUP_F_main_BB__1_30;
+LEGUP_F_main_BB__1_3:
+		next_state = LEGUP_F_main_BB__1_4;
 LEGUP_F_main_BB__1_30:
 		next_state = LEGUP_F_main_BB__1_31;
 LEGUP_F_main_BB__1_31:
@@ -3343,16 +3225,10 @@ LEGUP_F_main_BB__1_4:
 LEGUP_F_main_BB__1_40:
 		next_state = LEGUP_F_main_BB__1_41;
 LEGUP_F_main_BB__1_41:
-		next_state = LEGUP_F_main_BB__1_42;
-LEGUP_F_main_BB__1_42:
-		next_state = LEGUP_F_main_BB__1_43;
-LEGUP_F_main_BB__1_43:
-		next_state = LEGUP_F_main_BB__1_44;
-LEGUP_F_main_BB__1_44:
-	if ((main_1_7 == 1'd1))
-		next_state = LEGUP_F_main_BB__10_60;
-	else if ((main_1_7 == 1'd0))
-		next_state = LEGUP_F_main_BB__8_45;
+	if ((main_1_12 == 1'd1))
+		next_state = LEGUP_F_main_BB__15_57;
+	else if ((main_1_12 == 1'd0))
+		next_state = LEGUP_F_main_BB__13_42;
 LEGUP_F_main_BB__1_5:
 		next_state = LEGUP_F_main_BB__1_6;
 LEGUP_F_main_BB__1_6:
@@ -3363,348 +3239,284 @@ LEGUP_F_main_BB__1_8:
 		next_state = LEGUP_F_main_BB__1_9;
 LEGUP_F_main_BB__1_9:
 		next_state = LEGUP_F_main_BB__1_10;
-LEGUP_F_main_BB__20_107:
-	if ((main_1_7_reg == 1'd1))
-		next_state = LEGUP_F_main_BB__23_123;
-	else if ((main_1_7_reg == 1'd0))
-		next_state = LEGUP_F_main_BB__21_108;
-LEGUP_F_main_BB__21_108:
-		next_state = LEGUP_F_main_BB__21_109;
-LEGUP_F_main_BB__21_109:
-		next_state = LEGUP_F_main_BB__21_110;
-LEGUP_F_main_BB__21_110:
-		next_state = LEGUP_F_main_BB__21_111;
-LEGUP_F_main_BB__21_111:
-		next_state = LEGUP_F_main_BB__21_112;
-LEGUP_F_main_BB__21_112:
-		next_state = LEGUP_F_main_BB__21_113;
-LEGUP_F_main_BB__21_113:
-		next_state = LEGUP_F_main_BB__21_114;
-LEGUP_F_main_BB__21_114:
-		next_state = LEGUP_F_main_BB__21_115;
-LEGUP_F_main_BB__21_115:
-		next_state = LEGUP_F_main_BB__21_116;
-LEGUP_F_main_BB__21_116:
-		next_state = LEGUP_F_main_BB__21_117;
-LEGUP_F_main_BB__21_117:
-		next_state = LEGUP_F_main_BB__21_118;
-LEGUP_F_main_BB__21_118:
-		next_state = LEGUP_F_main_BB__21_119;
-LEGUP_F_main_BB__21_119:
-		next_state = LEGUP_F_main_BB__21_120;
-LEGUP_F_main_BB__21_120:
-		next_state = LEGUP_F_main_BB__21_121;
-LEGUP_F_main_BB__21_121:
-		next_state = LEGUP_F_main_BB__21_122;
-LEGUP_F_main_BB__21_122:
-		next_state = LEGUP_F_main_BB__23_123;
-LEGUP_F_main_BB__23_123:
-		next_state = LEGUP_F_main_BB__23_124;
-LEGUP_F_main_BB__23_124:
-		next_state = LEGUP_F_main_BB__23_125;
-LEGUP_F_main_BB__23_125:
-		next_state = LEGUP_F_main_BB__23_126;
-LEGUP_F_main_BB__23_126:
-		next_state = LEGUP_F_main_BB__23_127;
-LEGUP_F_main_BB__23_127:
-		next_state = LEGUP_F_main_BB__23_128;
-LEGUP_F_main_BB__23_128:
-		next_state = LEGUP_F_main_BB__23_129;
-LEGUP_F_main_BB__23_129:
-		next_state = LEGUP_F_main_BB__23_130;
-LEGUP_F_main_BB__23_130:
-		next_state = LEGUP_F_main_BB__23_131;
-LEGUP_F_main_BB__23_131:
-		next_state = LEGUP_F_main_BB__23_132;
-LEGUP_F_main_BB__23_132:
-		next_state = LEGUP_F_main_BB__23_133;
-LEGUP_F_main_BB__23_133:
-		next_state = LEGUP_F_main_BB__23_134;
-LEGUP_F_main_BB__23_134:
-		next_state = LEGUP_F_main_BB__23_135;
-LEGUP_F_main_BB__23_135:
-		next_state = LEGUP_F_main_BB__23_136;
-LEGUP_F_main_BB__23_136:
-		next_state = LEGUP_F_main_BB__23_137;
-LEGUP_F_main_BB__23_137:
-		next_state = LEGUP_F_main_BB__23_138;
-LEGUP_F_main_BB__23_138:
-		next_state = LEGUP_F_main_BB__23_139;
-LEGUP_F_main_BB__23_139:
-		next_state = LEGUP_F_main_BB__23_140;
-LEGUP_F_main_BB__23_140:
-		next_state = LEGUP_F_main_BB__23_141;
-LEGUP_F_main_BB__23_141:
-		next_state = LEGUP_F_main_BB__23_142;
-LEGUP_F_main_BB__23_142:
-		next_state = LEGUP_F_main_BB__23_143;
-LEGUP_F_main_BB__23_143:
-		next_state = LEGUP_F_main_BB__23_144;
-LEGUP_F_main_BB__23_144:
-		next_state = LEGUP_F_main_BB__23_145;
-LEGUP_F_main_BB__23_145:
-		next_state = LEGUP_F_main_BB__23_146;
-LEGUP_F_main_BB__23_146:
-		next_state = LEGUP_F_main_BB__23_147;
-LEGUP_F_main_BB__23_147:
-		next_state = LEGUP_F_main_BB__23_148;
-LEGUP_F_main_BB__23_148:
-		next_state = LEGUP_F_main_BB__23_149;
-LEGUP_F_main_BB__23_149:
-		next_state = LEGUP_F_main_BB__23_150;
-LEGUP_F_main_BB__23_150:
-		next_state = LEGUP_F_main_BB__23_151;
-LEGUP_F_main_BB__23_151:
+LEGUP_F_main_BB__20_74:
+		next_state = LEGUP_F_main_BB__20_75;
+LEGUP_F_main_BB__20_75:
+		next_state = LEGUP_F_main_BB__20_76;
+LEGUP_F_main_BB__20_76:
+		next_state = LEGUP_F_main_BB__20_77;
+LEGUP_F_main_BB__20_77:
+		next_state = LEGUP_F_main_BB__20_78;
+LEGUP_F_main_BB__20_78:
+		next_state = LEGUP_F_main_BB__20_79;
+LEGUP_F_main_BB__20_79:
+		next_state = LEGUP_F_main_BB__20_80;
+LEGUP_F_main_BB__20_80:
+		next_state = LEGUP_F_main_BB__20_81;
+LEGUP_F_main_BB__20_81:
+		next_state = LEGUP_F_main_BB__20_82;
+LEGUP_F_main_BB__20_82:
+		next_state = LEGUP_F_main_BB__20_83;
+LEGUP_F_main_BB__20_83:
+		next_state = LEGUP_F_main_BB__20_84;
+LEGUP_F_main_BB__20_84:
+		next_state = LEGUP_F_main_BB__20_85;
+LEGUP_F_main_BB__20_85:
+		next_state = LEGUP_F_main_BB__20_86;
+LEGUP_F_main_BB__20_86:
+		next_state = LEGUP_F_main_BB__20_87;
+LEGUP_F_main_BB__20_87:
+		next_state = LEGUP_F_main_BB__20_88;
+LEGUP_F_main_BB__20_88:
+		next_state = LEGUP_F_main_BB__22_89;
+LEGUP_F_main_BB__22_100:
+		next_state = LEGUP_F_main_BB__22_101;
+LEGUP_F_main_BB__22_101:
+		next_state = LEGUP_F_main_BB__22_102;
+LEGUP_F_main_BB__22_102:
+		next_state = LEGUP_F_main_BB__22_103;
+LEGUP_F_main_BB__22_103:
+		next_state = LEGUP_F_main_BB_convergedexiti_149;
+LEGUP_F_main_BB__22_89:
+		next_state = LEGUP_F_main_BB__22_90;
+LEGUP_F_main_BB__22_90:
+		next_state = LEGUP_F_main_BB__22_91;
+LEGUP_F_main_BB__22_91:
+		next_state = LEGUP_F_main_BB__22_92;
+LEGUP_F_main_BB__22_92:
+		next_state = LEGUP_F_main_BB__22_93;
+LEGUP_F_main_BB__22_93:
+		next_state = LEGUP_F_main_BB__22_94;
+LEGUP_F_main_BB__22_94:
+		next_state = LEGUP_F_main_BB__22_95;
+LEGUP_F_main_BB__22_95:
+		next_state = LEGUP_F_main_BB__22_96;
+LEGUP_F_main_BB__22_96:
+		next_state = LEGUP_F_main_BB__22_97;
+LEGUP_F_main_BB__22_97:
+		next_state = LEGUP_F_main_BB__22_98;
+LEGUP_F_main_BB__22_98:
+		next_state = LEGUP_F_main_BB__22_99;
+LEGUP_F_main_BB__22_99:
+		next_state = LEGUP_F_main_BB__22_100;
+LEGUP_F_main_BB__25_104:
+	if ((main_1_12_reg == 1'd1))
+		next_state = LEGUP_F_main_BB__28_120;
+	else if ((main_1_12_reg == 1'd0))
+		next_state = LEGUP_F_main_BB__26_105;
+LEGUP_F_main_BB__26_105:
+		next_state = LEGUP_F_main_BB__26_106;
+LEGUP_F_main_BB__26_106:
+		next_state = LEGUP_F_main_BB__26_107;
+LEGUP_F_main_BB__26_107:
+		next_state = LEGUP_F_main_BB__26_108;
+LEGUP_F_main_BB__26_108:
+		next_state = LEGUP_F_main_BB__26_109;
+LEGUP_F_main_BB__26_109:
+		next_state = LEGUP_F_main_BB__26_110;
+LEGUP_F_main_BB__26_110:
+		next_state = LEGUP_F_main_BB__26_111;
+LEGUP_F_main_BB__26_111:
+		next_state = LEGUP_F_main_BB__26_112;
+LEGUP_F_main_BB__26_112:
+		next_state = LEGUP_F_main_BB__26_113;
+LEGUP_F_main_BB__26_113:
+		next_state = LEGUP_F_main_BB__26_114;
+LEGUP_F_main_BB__26_114:
+		next_state = LEGUP_F_main_BB__26_115;
+LEGUP_F_main_BB__26_115:
+		next_state = LEGUP_F_main_BB__26_116;
+LEGUP_F_main_BB__26_116:
+		next_state = LEGUP_F_main_BB__26_117;
+LEGUP_F_main_BB__26_117:
+		next_state = LEGUP_F_main_BB__26_118;
+LEGUP_F_main_BB__26_118:
+		next_state = LEGUP_F_main_BB__26_119;
+LEGUP_F_main_BB__26_119:
+		next_state = LEGUP_F_main_BB__28_120;
+LEGUP_F_main_BB__28_120:
+		next_state = LEGUP_F_main_BB__28_121;
+LEGUP_F_main_BB__28_121:
+		next_state = LEGUP_F_main_BB__28_122;
+LEGUP_F_main_BB__28_122:
+		next_state = LEGUP_F_main_BB__28_123;
+LEGUP_F_main_BB__28_123:
+		next_state = LEGUP_F_main_BB__28_124;
+LEGUP_F_main_BB__28_124:
+		next_state = LEGUP_F_main_BB__28_125;
+LEGUP_F_main_BB__28_125:
+		next_state = LEGUP_F_main_BB__28_126;
+LEGUP_F_main_BB__28_126:
+		next_state = LEGUP_F_main_BB__28_127;
+LEGUP_F_main_BB__28_127:
+		next_state = LEGUP_F_main_BB__28_128;
+LEGUP_F_main_BB__28_128:
+		next_state = LEGUP_F_main_BB__28_129;
+LEGUP_F_main_BB__28_129:
+		next_state = LEGUP_F_main_BB__28_130;
+LEGUP_F_main_BB__28_130:
+		next_state = LEGUP_F_main_BB__28_131;
+LEGUP_F_main_BB__28_131:
+		next_state = LEGUP_F_main_BB__28_132;
+LEGUP_F_main_BB__28_132:
+		next_state = LEGUP_F_main_BB__28_133;
+LEGUP_F_main_BB__28_133:
+		next_state = LEGUP_F_main_BB__28_134;
+LEGUP_F_main_BB__28_134:
+		next_state = LEGUP_F_main_BB__28_135;
+LEGUP_F_main_BB__28_135:
+		next_state = LEGUP_F_main_BB__28_136;
+LEGUP_F_main_BB__28_136:
+		next_state = LEGUP_F_main_BB__28_137;
+LEGUP_F_main_BB__28_137:
+		next_state = LEGUP_F_main_BB__28_138;
+LEGUP_F_main_BB__28_138:
+		next_state = LEGUP_F_main_BB__28_139;
+LEGUP_F_main_BB__28_139:
+		next_state = LEGUP_F_main_BB__28_140;
+LEGUP_F_main_BB__28_140:
+		next_state = LEGUP_F_main_BB__28_141;
+LEGUP_F_main_BB__28_141:
+		next_state = LEGUP_F_main_BB__28_142;
+LEGUP_F_main_BB__28_142:
+		next_state = LEGUP_F_main_BB__28_143;
+LEGUP_F_main_BB__28_143:
+		next_state = LEGUP_F_main_BB__28_144;
+LEGUP_F_main_BB__28_144:
+		next_state = LEGUP_F_main_BB__28_145;
+LEGUP_F_main_BB__28_145:
+		next_state = LEGUP_F_main_BB__28_146;
+LEGUP_F_main_BB__28_146:
+		next_state = LEGUP_F_main_BB__28_147;
+LEGUP_F_main_BB__28_147:
+		next_state = LEGUP_F_main_BB__28_148;
+LEGUP_F_main_BB__28_148:
+		next_state = LEGUP_F_main_BB_convergedexiti_149;
+LEGUP_F_main_BB__46_202:
+		next_state = LEGUP_F_main_BB__46_203;
+LEGUP_F_main_BB__46_203:
+	if ((main_46_orcondiii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_46_orcondiii == 1'd0))
+		next_state = LEGUP_F_main_BB__49_204;
+LEGUP_F_main_BB__49_204:
+		next_state = LEGUP_F_main_BB__49_205;
+LEGUP_F_main_BB__49_205:
+	if ((main_49_orcond12iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_49_orcond12iii == 1'd0))
+		next_state = LEGUP_F_main_BB__52_206;
+LEGUP_F_main_BB__52_206:
+		next_state = LEGUP_F_main_BB__52_207;
+LEGUP_F_main_BB__52_207:
+	if ((main_52_orcond3iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_52_orcond3iii == 1'd0))
+		next_state = LEGUP_F_main_BB__55_208;
+LEGUP_F_main_BB__55_208:
+		next_state = LEGUP_F_main_BB__55_209;
+LEGUP_F_main_BB__55_209:
+	if ((main_55_orcond13iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_55_orcond13iii == 1'd0))
+		next_state = LEGUP_F_main_BB__58_210;
+LEGUP_F_main_BB__58_210:
+		next_state = LEGUP_F_main_BB__58_211;
+LEGUP_F_main_BB__58_211:
+	if ((main_58_orcond5iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_58_orcond5iii == 1'd0))
+		next_state = LEGUP_F_main_BB__61_212;
+LEGUP_F_main_BB__61_212:
+		next_state = LEGUP_F_main_BB__61_213;
+LEGUP_F_main_BB__61_213:
+	if ((main_61_orcond14iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_61_orcond14iii == 1'd0))
+		next_state = LEGUP_F_main_BB__64_214;
+LEGUP_F_main_BB__64_214:
+		next_state = LEGUP_F_main_BB__64_215;
+LEGUP_F_main_BB__64_215:
+	if ((main_64_orcond7iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_64_orcond7iii == 1'd0))
+		next_state = LEGUP_F_main_BB__67_216;
+LEGUP_F_main_BB__67_216:
+		next_state = LEGUP_F_main_BB__67_217;
+LEGUP_F_main_BB__67_217:
+	if ((main_67_orcond15iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_67_orcond15iii == 1'd0))
+		next_state = LEGUP_F_main_BB__70_218;
+LEGUP_F_main_BB__70_218:
+		next_state = LEGUP_F_main_BB__70_219;
+LEGUP_F_main_BB__70_219:
+	if ((main_70_orcond9iii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_70_orcond9iii == 1'd0))
+		next_state = LEGUP_F_main_BB__73_220;
+LEGUP_F_main_BB__73_220:
+		next_state = LEGUP_F_main_BB__73_221;
+LEGUP_F_main_BB__73_221:
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+LEGUP_F_main_BB__84_278:
+		next_state = LEGUP_F_main_BB__84_279;
+LEGUP_F_main_BB__84_279:
+	if ((main_84_orcondi1ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_84_orcondi1ii == 1'd0))
+		next_state = LEGUP_F_main_BB__87_280;
+LEGUP_F_main_BB__87_280:
+		next_state = LEGUP_F_main_BB__87_281;
+LEGUP_F_main_BB__87_281:
+	if ((main_87_orcond12i2ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_87_orcond12i2ii == 1'd0))
+		next_state = LEGUP_F_main_BB__90_282;
+LEGUP_F_main_BB__90_282:
+		next_state = LEGUP_F_main_BB__90_283;
+LEGUP_F_main_BB__90_283:
+		next_state = LEGUP_F_main_BB__90_284;
+LEGUP_F_main_BB__90_284:
+	if ((main_90_orcond3i3ii_reg == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_90_orcond3i3ii_reg == 1'd0))
+		next_state = LEGUP_F_main_BB__94_285;
+LEGUP_F_main_BB__94_285:
+		next_state = LEGUP_F_main_BB__94_286;
+LEGUP_F_main_BB__94_286:
+	if ((main_94_orcond13i4ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_94_orcond13i4ii == 1'd0))
+		next_state = LEGUP_F_main_BB__97_287;
+LEGUP_F_main_BB__97_287:
+		next_state = LEGUP_F_main_BB__97_288;
+LEGUP_F_main_BB__97_288:
+	if ((main_97_orcond14i5ii == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_97_orcond14i5ii == 1'd0))
+		next_state = LEGUP_F_main_BB__100_289;
+LEGUP_F_main_BB_convergedexiti_149:
+		next_state = LEGUP_F_main_BB_convergedexiti_150;
+LEGUP_F_main_BB_convergedexiti_150:
+		next_state = LEGUP_F_main_BB_convergedexiti_151;
+LEGUP_F_main_BB_convergedexiti_151:
 		next_state = LEGUP_F_main_BB_convergedexiti_152;
-LEGUP_F_main_BB__30_156:
-		next_state = LEGUP_F_main_BB__30_157;
-LEGUP_F_main_BB__30_157:
-		next_state = LEGUP_F_main_BB__32_158;
-LEGUP_F_main_BB__32_158:
-		next_state = LEGUP_F_main_BB__32_159;
-LEGUP_F_main_BB__32_159:
-		next_state = LEGUP_F_main_BB__32_160;
-LEGUP_F_main_BB__32_160:
-		next_state = LEGUP_F_main_BB__32_161;
-LEGUP_F_main_BB__32_161:
-		next_state = LEGUP_F_main_BB__32_162;
-LEGUP_F_main_BB__32_162:
-		next_state = LEGUP_F_main_BB__32_163;
-LEGUP_F_main_BB__32_163:
-		next_state = LEGUP_F_main_BB__32_164;
-LEGUP_F_main_BB__32_164:
-		next_state = LEGUP_F_main_BB__32_165;
-LEGUP_F_main_BB__32_165:
-		next_state = LEGUP_F_main_BB__32_166;
-LEGUP_F_main_BB__32_166:
-		next_state = LEGUP_F_main_BB__32_167;
-LEGUP_F_main_BB__32_167:
-		next_state = LEGUP_F_main_BB__32_168;
-LEGUP_F_main_BB__32_168:
-		next_state = LEGUP_F_main_BB__32_169;
-LEGUP_F_main_BB__32_169:
-		next_state = LEGUP_F_main_BB__32_170;
-LEGUP_F_main_BB__32_170:
-		next_state = LEGUP_F_main_BB__32_171;
-LEGUP_F_main_BB__32_171:
-		next_state = LEGUP_F_main_BB__32_172;
-LEGUP_F_main_BB__32_172:
-		next_state = LEGUP_F_main_BB__32_173;
-LEGUP_F_main_BB__32_173:
-		next_state = LEGUP_F_main_BB__32_174;
-LEGUP_F_main_BB__32_174:
-		next_state = LEGUP_F_main_BB__32_175;
-LEGUP_F_main_BB__32_175:
-		next_state = LEGUP_F_main_BB__32_176;
-LEGUP_F_main_BB__32_176:
-		next_state = LEGUP_F_main_BB__32_177;
-LEGUP_F_main_BB__32_177:
-		next_state = LEGUP_F_main_BB__32_178;
-LEGUP_F_main_BB__32_178:
-		next_state = LEGUP_F_main_BB__32_179;
-LEGUP_F_main_BB__32_179:
-		next_state = LEGUP_F_main_BB__32_180;
-LEGUP_F_main_BB__32_180:
-		next_state = LEGUP_F_main_BB__32_181;
-LEGUP_F_main_BB__32_181:
-		next_state = LEGUP_F_main_BB__32_182;
-LEGUP_F_main_BB__32_182:
-		next_state = LEGUP_F_main_BB__32_183;
-LEGUP_F_main_BB__32_183:
-		next_state = LEGUP_F_main_BB__32_184;
-LEGUP_F_main_BB__32_184:
-		next_state = LEGUP_F_main_BB__32_185;
-LEGUP_F_main_BB__32_185:
-		next_state = LEGUP_F_main_BB__32_186;
-LEGUP_F_main_BB__32_186:
-		next_state = LEGUP_F_main_BB__32_187;
-LEGUP_F_main_BB__32_187:
-		next_state = LEGUP_F_main_BB__32_188;
-LEGUP_F_main_BB__32_188:
-		next_state = LEGUP_F_main_BB__32_189;
-LEGUP_F_main_BB__32_189:
-		next_state = LEGUP_F_main_BB__32_190;
-LEGUP_F_main_BB__32_190:
-		next_state = LEGUP_F_main_BB__32_191;
-LEGUP_F_main_BB__32_191:
-		next_state = LEGUP_F_main_BB__32_192;
-LEGUP_F_main_BB__32_192:
-		next_state = LEGUP_F_main_BB__32_193;
-LEGUP_F_main_BB__32_193:
-		next_state = LEGUP_F_main_BB__32_194;
-LEGUP_F_main_BB__32_194:
-		next_state = LEGUP_F_main_BB__32_195;
-LEGUP_F_main_BB__32_195:
-		next_state = LEGUP_F_main_BB__32_196;
-LEGUP_F_main_BB__32_196:
-		next_state = LEGUP_F_main_BB__32_197;
-LEGUP_F_main_BB__32_197:
-		next_state = LEGUP_F_main_BB__32_198;
-LEGUP_F_main_BB__32_198:
-		next_state = LEGUP_F_main_BB__32_199;
-LEGUP_F_main_BB__32_199:
-		next_state = LEGUP_F_main_BB__32_200;
-LEGUP_F_main_BB__32_200:
-	if ((main_32_exitcond_reg == 1'd1))
-		next_state = LEGUP_F_main_BB_preheader15iipreheader_201;
-	else if ((main_32_exitcond_reg == 1'd0))
-		next_state = LEGUP_F_main_BB__32_158;
-LEGUP_F_main_BB__44_206:
-		next_state = LEGUP_F_main_BB__44_207;
-LEGUP_F_main_BB__44_207:
-	if ((main_44_orcondiii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_44_orcondiii == 1'd0))
-		next_state = LEGUP_F_main_BB__47_208;
-LEGUP_F_main_BB__47_208:
-		next_state = LEGUP_F_main_BB__47_209;
-LEGUP_F_main_BB__47_209:
-	if ((main_47_orcond12iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_47_orcond12iii == 1'd0))
-		next_state = LEGUP_F_main_BB__50_210;
-LEGUP_F_main_BB__50_210:
-		next_state = LEGUP_F_main_BB__50_211;
-LEGUP_F_main_BB__50_211:
-	if ((main_50_orcond3iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_50_orcond3iii == 1'd0))
-		next_state = LEGUP_F_main_BB__53_212;
-LEGUP_F_main_BB__53_212:
-		next_state = LEGUP_F_main_BB__53_213;
-LEGUP_F_main_BB__53_213:
-	if ((main_53_orcond13iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_53_orcond13iii == 1'd0))
-		next_state = LEGUP_F_main_BB__56_214;
-LEGUP_F_main_BB__56_214:
-		next_state = LEGUP_F_main_BB__56_215;
-LEGUP_F_main_BB__56_215:
-	if ((main_56_orcond5iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_56_orcond5iii == 1'd0))
-		next_state = LEGUP_F_main_BB__59_216;
-LEGUP_F_main_BB__59_216:
-		next_state = LEGUP_F_main_BB__59_217;
-LEGUP_F_main_BB__59_217:
-	if ((main_59_orcond14iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_59_orcond14iii == 1'd0))
-		next_state = LEGUP_F_main_BB__62_218;
-LEGUP_F_main_BB__62_218:
-		next_state = LEGUP_F_main_BB__62_219;
-LEGUP_F_main_BB__62_219:
-	if ((main_62_orcond7iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_62_orcond7iii == 1'd0))
-		next_state = LEGUP_F_main_BB__65_220;
-LEGUP_F_main_BB__65_220:
-		next_state = LEGUP_F_main_BB__65_221;
-LEGUP_F_main_BB__65_221:
-	if ((main_65_orcond15iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_65_orcond15iii == 1'd0))
-		next_state = LEGUP_F_main_BB__68_222;
-LEGUP_F_main_BB__68_222:
-		next_state = LEGUP_F_main_BB__68_223;
-LEGUP_F_main_BB__68_223:
-	if ((main_68_orcond9iii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_68_orcond9iii == 1'd0))
-		next_state = LEGUP_F_main_BB__71_224;
-LEGUP_F_main_BB__71_224:
-		next_state = LEGUP_F_main_BB__71_225;
-LEGUP_F_main_BB__71_225:
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-LEGUP_F_main_BB__82_282:
-		next_state = LEGUP_F_main_BB__82_283;
-LEGUP_F_main_BB__82_283:
-	if ((main_82_orcondi1ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_82_orcondi1ii == 1'd0))
-		next_state = LEGUP_F_main_BB__85_284;
-LEGUP_F_main_BB__85_284:
-		next_state = LEGUP_F_main_BB__85_285;
-LEGUP_F_main_BB__85_285:
-	if ((main_85_orcond12i2ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_85_orcond12i2ii == 1'd0))
-		next_state = LEGUP_F_main_BB__88_286;
-LEGUP_F_main_BB__88_286:
-		next_state = LEGUP_F_main_BB__88_287;
-LEGUP_F_main_BB__88_287:
-		next_state = LEGUP_F_main_BB__88_288;
-LEGUP_F_main_BB__88_288:
-	if ((main_88_orcond3i3ii_reg == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_88_orcond3i3ii_reg == 1'd0))
-		next_state = LEGUP_F_main_BB__92_289;
-LEGUP_F_main_BB__8_45:
-		next_state = LEGUP_F_main_BB__8_46;
-LEGUP_F_main_BB__8_46:
-		next_state = LEGUP_F_main_BB__8_47;
-LEGUP_F_main_BB__8_47:
-		next_state = LEGUP_F_main_BB__8_48;
-LEGUP_F_main_BB__8_48:
-		next_state = LEGUP_F_main_BB__8_49;
-LEGUP_F_main_BB__8_49:
-		next_state = LEGUP_F_main_BB__8_50;
-LEGUP_F_main_BB__8_50:
-		next_state = LEGUP_F_main_BB__8_51;
-LEGUP_F_main_BB__8_51:
-		next_state = LEGUP_F_main_BB__8_52;
-LEGUP_F_main_BB__8_52:
-		next_state = LEGUP_F_main_BB__8_53;
-LEGUP_F_main_BB__8_53:
-		next_state = LEGUP_F_main_BB__8_54;
-LEGUP_F_main_BB__8_54:
-		next_state = LEGUP_F_main_BB__8_55;
-LEGUP_F_main_BB__8_55:
-		next_state = LEGUP_F_main_BB__8_56;
-LEGUP_F_main_BB__8_56:
-		next_state = LEGUP_F_main_BB__8_57;
-LEGUP_F_main_BB__8_57:
-		next_state = LEGUP_F_main_BB__8_58;
-LEGUP_F_main_BB__8_58:
-		next_state = LEGUP_F_main_BB__8_59;
-LEGUP_F_main_BB__8_59:
-		next_state = LEGUP_F_main_BB__10_60;
-LEGUP_F_main_BB__92_289:
-		next_state = LEGUP_F_main_BB__92_290;
-LEGUP_F_main_BB__92_290:
-	if ((main_92_orcond13i4ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_92_orcond13i4ii == 1'd0))
-		next_state = LEGUP_F_main_BB__95_291;
-LEGUP_F_main_BB__95_291:
-		next_state = LEGUP_F_main_BB__95_292;
-LEGUP_F_main_BB__95_292:
-	if ((main_95_orcond14i5ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_95_orcond14i5ii == 1'd0))
-		next_state = LEGUP_F_main_BB__98_293;
-LEGUP_F_main_BB__98_293:
-		next_state = LEGUP_F_main_BB__98_294;
-LEGUP_F_main_BB__98_294:
-	if ((main_98_orcond5i6ii == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_98_orcond5i6ii == 1'd0))
-		next_state = LEGUP_F_main_BB__101_295;
 LEGUP_F_main_BB_convergedexiti_152:
-		next_state = LEGUP_F_main_BB_convergedexiti_153;
-LEGUP_F_main_BB_convergedexiti_153:
-		next_state = LEGUP_F_main_BB_convergedexiti_154;
-LEGUP_F_main_BB_convergedexiti_154:
-		next_state = LEGUP_F_main_BB_convergedexiti_155;
-LEGUP_F_main_BB_convergedexiti_155:
-	if ((main_convergedexiti_29 == 1'd1))
-		next_state = LEGUP_F_main_BB_fasticaexitloopexit_553;
-	else if ((main_convergedexiti_29 == 1'd0))
-		next_state = LEGUP_F_main_BB__30_156;
-LEGUP_F_main_BB_fasticaexit_554:
+	if ((main_convergedexiti_34 == 1'd1))
+		next_state = LEGUP_F_main_BB_fasticaexit_546;
+	else if ((main_convergedexiti_34 == 1'd0))
+		next_state = LEGUP_F_main_BB_preheader2preheader_153;
+LEGUP_F_main_BB_fasticaexit_546:
 		next_state = LEGUP_0;
-LEGUP_F_main_BB_fasticaexitloopexit_553:
-		next_state = LEGUP_F_main_BB_fasticaexit_554;
+LEGUP_F_main_BB_linear_sech2exitii_303:
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_304;
+LEGUP_F_main_BB_linear_sech2exitii_304:
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_305;
+LEGUP_F_main_BB_linear_sech2exitii_305:
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_306;
+LEGUP_F_main_BB_linear_sech2exitii_306:
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
 LEGUP_F_main_BB_linear_sech2exitii_307:
 		next_state = LEGUP_F_main_BB_linear_sech2exitii_308;
 LEGUP_F_main_BB_linear_sech2exitii_308:
@@ -3776,18 +3588,18 @@ LEGUP_F_main_BB_linear_sech2exitii_340:
 LEGUP_F_main_BB_linear_sech2exitii_341:
 		next_state = LEGUP_F_main_BB_linear_sech2exitii_342;
 LEGUP_F_main_BB_linear_sech2exitii_342:
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_343;
-LEGUP_F_main_BB_linear_sech2exitii_343:
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_344;
-LEGUP_F_main_BB_linear_sech2exitii_344:
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_345;
-LEGUP_F_main_BB_linear_sech2exitii_345:
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_346;
-LEGUP_F_main_BB_linear_sech2exitii_346:
 	if ((main_linear_sech2exitii_exitcond9_reg == 1'd1))
-		next_state = LEGUP_F_main_BB_rotateexiti_423;
+		next_state = LEGUP_F_main_BB_rotateexiti_419;
 	else if ((main_linear_sech2exitii_exitcond9_reg == 1'd0))
-		next_state = LEGUP_F_main_BB_preheader_278;
+		next_state = LEGUP_F_main_BB_preheader_274;
+LEGUP_F_main_BB_linear_tanhexit1ii_367:
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_368;
+LEGUP_F_main_BB_linear_tanhexit1ii_368:
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_369;
+LEGUP_F_main_BB_linear_tanhexit1ii_369:
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_370;
+LEGUP_F_main_BB_linear_tanhexit1ii_370:
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
 LEGUP_F_main_BB_linear_tanhexit1ii_371:
 		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_372;
 LEGUP_F_main_BB_linear_tanhexit1ii_372:
@@ -3881,18 +3693,18 @@ LEGUP_F_main_BB_linear_tanhexit1ii_415:
 LEGUP_F_main_BB_linear_tanhexit1ii_416:
 		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_417;
 LEGUP_F_main_BB_linear_tanhexit1ii_417:
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_418;
-LEGUP_F_main_BB_linear_tanhexit1ii_418:
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_419;
-LEGUP_F_main_BB_linear_tanhexit1ii_419:
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_420;
-LEGUP_F_main_BB_linear_tanhexit1ii_420:
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_421;
-LEGUP_F_main_BB_linear_tanhexit1ii_421:
 	if ((main_linear_tanhexit1ii_exitcond6_reg == 1'd1))
-		next_state = LEGUP_F_main_BB_preheaderpreheader_422;
+		next_state = LEGUP_F_main_BB_preheaderpreheader_418;
 	else if ((main_linear_tanhexit1ii_exitcond6_reg == 1'd0))
-		next_state = LEGUP_F_main_BB_preheader5_347;
+		next_state = LEGUP_F_main_BB_preheader1_343;
+LEGUP_F_main_BB_linear_tanhexitii_222:
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_223;
+LEGUP_F_main_BB_linear_tanhexitii_223:
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_224;
+LEGUP_F_main_BB_linear_tanhexitii_224:
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_225;
+LEGUP_F_main_BB_linear_tanhexitii_225:
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
 LEGUP_F_main_BB_linear_tanhexitii_226:
 		next_state = LEGUP_F_main_BB_linear_tanhexitii_227;
 LEGUP_F_main_BB_linear_tanhexitii_227:
@@ -3986,18 +3798,18 @@ LEGUP_F_main_BB_linear_tanhexitii_270:
 LEGUP_F_main_BB_linear_tanhexitii_271:
 		next_state = LEGUP_F_main_BB_linear_tanhexitii_272;
 LEGUP_F_main_BB_linear_tanhexitii_272:
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_273;
-LEGUP_F_main_BB_linear_tanhexitii_273:
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_274;
-LEGUP_F_main_BB_linear_tanhexitii_274:
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_275;
-LEGUP_F_main_BB_linear_tanhexitii_275:
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_276;
-LEGUP_F_main_BB_linear_tanhexitii_276:
 	if ((main_linear_tanhexitii_exitcond3_reg == 1'd1))
-		next_state = LEGUP_F_main_BB_preheader5preheader_277;
+		next_state = LEGUP_F_main_BB_preheader1preheader_273;
 	else if ((main_linear_tanhexitii_exitcond3_reg == 1'd0))
-		next_state = LEGUP_F_main_BB_preheader15ii_202;
+		next_state = LEGUP_F_main_BB_preheader15ii_198;
+LEGUP_F_main_BB_normalizeexiti_508:
+		next_state = LEGUP_F_main_BB_normalizeexiti_509;
+LEGUP_F_main_BB_normalizeexiti_509:
+		next_state = LEGUP_F_main_BB_normalizeexiti_510;
+LEGUP_F_main_BB_normalizeexiti_510:
+		next_state = LEGUP_F_main_BB_normalizeexiti_511;
+LEGUP_F_main_BB_normalizeexiti_511:
+		next_state = LEGUP_F_main_BB_normalizeexiti_512;
 LEGUP_F_main_BB_normalizeexiti_512:
 		next_state = LEGUP_F_main_BB_normalizeexiti_513;
 LEGUP_F_main_BB_normalizeexiti_513:
@@ -4065,57 +3877,145 @@ LEGUP_F_main_BB_normalizeexiti_543:
 LEGUP_F_main_BB_normalizeexiti_544:
 		next_state = LEGUP_F_main_BB_normalizeexiti_545;
 LEGUP_F_main_BB_normalizeexiti_545:
-		next_state = LEGUP_F_main_BB_normalizeexiti_546;
-LEGUP_F_main_BB_normalizeexiti_546:
-		next_state = LEGUP_F_main_BB_normalizeexiti_547;
-LEGUP_F_main_BB_normalizeexiti_547:
-		next_state = LEGUP_F_main_BB_normalizeexiti_548;
-LEGUP_F_main_BB_normalizeexiti_548:
-		next_state = LEGUP_F_main_BB_normalizeexiti_549;
-LEGUP_F_main_BB_normalizeexiti_549:
-	if ((main_normalizeexiti_197_reg == 1'd1))
-		next_state = LEGUP_F_main_BB__198_550;
-	else if ((main_normalizeexiti_197_reg == 1'd0))
-		next_state = LEGUP_F_main_BB__1_4;
-LEGUP_F_main_BB_preheader15ii_202:
-		next_state = LEGUP_F_main_BB_preheader15ii_203;
-LEGUP_F_main_BB_preheader15ii_203:
-		next_state = LEGUP_F_main_BB_preheader15ii_204;
-LEGUP_F_main_BB_preheader15ii_204:
-		next_state = LEGUP_F_main_BB_preheader15ii_205;
-LEGUP_F_main_BB_preheader15ii_205:
-	if ((main_preheader15ii_43 == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexitii_226;
-	else if ((main_preheader15ii_43 == 1'd0))
-		next_state = LEGUP_F_main_BB__44_206;
-LEGUP_F_main_BB_preheader15iipreheader_201:
-		next_state = LEGUP_F_main_BB_preheader15ii_202;
-LEGUP_F_main_BB_preheader5_347:
-		next_state = LEGUP_F_main_BB_preheader5_348;
-LEGUP_F_main_BB_preheader5_348:
-		next_state = LEGUP_F_main_BB_preheader5_349;
-LEGUP_F_main_BB_preheader5_349:
-		next_state = LEGUP_F_main_BB_preheader5_350;
-LEGUP_F_main_BB_preheader5_350:
-	if ((main_preheader5_126 == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_371;
-	else if ((main_preheader5_126 == 1'd0))
-		next_state = LEGUP_F_main_BB__127_351;
-LEGUP_F_main_BB_preheader5preheader_277:
-		next_state = LEGUP_F_main_BB_preheader5_347;
-LEGUP_F_main_BB_preheader_278:
-		next_state = LEGUP_F_main_BB_preheader_279;
-LEGUP_F_main_BB_preheader_279:
-		next_state = LEGUP_F_main_BB_preheader_280;
-LEGUP_F_main_BB_preheader_280:
-		next_state = LEGUP_F_main_BB_preheader_281;
-LEGUP_F_main_BB_preheader_281:
-	if ((main_preheader_81 == 1'd1))
-		next_state = LEGUP_F_main_BB_linear_sech2exitii_307;
-	else if ((main_preheader_81 == 1'd0))
-		next_state = LEGUP_F_main_BB__82_282;
-LEGUP_F_main_BB_preheaderpreheader_422:
-		next_state = LEGUP_F_main_BB_preheader_278;
+		next_state = LEGUP_F_main_BB__1_1;
+LEGUP_F_main_BB_preheader15ii_198:
+		next_state = LEGUP_F_main_BB_preheader15ii_199;
+LEGUP_F_main_BB_preheader15ii_199:
+		next_state = LEGUP_F_main_BB_preheader15ii_200;
+LEGUP_F_main_BB_preheader15ii_200:
+		next_state = LEGUP_F_main_BB_preheader15ii_201;
+LEGUP_F_main_BB_preheader15ii_201:
+	if ((main_preheader15ii_45 == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexitii_222;
+	else if ((main_preheader15ii_45 == 1'd0))
+		next_state = LEGUP_F_main_BB__46_202;
+LEGUP_F_main_BB_preheader15iipreheader_197:
+		next_state = LEGUP_F_main_BB_preheader15ii_198;
+LEGUP_F_main_BB_preheader1_343:
+		next_state = LEGUP_F_main_BB_preheader1_344;
+LEGUP_F_main_BB_preheader1_344:
+		next_state = LEGUP_F_main_BB_preheader1_345;
+LEGUP_F_main_BB_preheader1_345:
+		next_state = LEGUP_F_main_BB_preheader1_346;
+LEGUP_F_main_BB_preheader1_346:
+	if ((main_preheader1_128 == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_tanhexit1ii_367;
+	else if ((main_preheader1_128 == 1'd0))
+		next_state = LEGUP_F_main_BB__129_347;
+LEGUP_F_main_BB_preheader1preheader_273:
+		next_state = LEGUP_F_main_BB_preheader1_343;
+LEGUP_F_main_BB_preheader2_154:
+		next_state = LEGUP_F_main_BB_preheader2_155;
+LEGUP_F_main_BB_preheader2_155:
+		next_state = LEGUP_F_main_BB_preheader2_156;
+LEGUP_F_main_BB_preheader2_156:
+		next_state = LEGUP_F_main_BB_preheader2_157;
+LEGUP_F_main_BB_preheader2_157:
+		next_state = LEGUP_F_main_BB_preheader2_158;
+LEGUP_F_main_BB_preheader2_158:
+		next_state = LEGUP_F_main_BB_preheader2_159;
+LEGUP_F_main_BB_preheader2_159:
+		next_state = LEGUP_F_main_BB_preheader2_160;
+LEGUP_F_main_BB_preheader2_160:
+		next_state = LEGUP_F_main_BB_preheader2_161;
+LEGUP_F_main_BB_preheader2_161:
+		next_state = LEGUP_F_main_BB_preheader2_162;
+LEGUP_F_main_BB_preheader2_162:
+		next_state = LEGUP_F_main_BB_preheader2_163;
+LEGUP_F_main_BB_preheader2_163:
+		next_state = LEGUP_F_main_BB_preheader2_164;
+LEGUP_F_main_BB_preheader2_164:
+		next_state = LEGUP_F_main_BB_preheader2_165;
+LEGUP_F_main_BB_preheader2_165:
+		next_state = LEGUP_F_main_BB_preheader2_166;
+LEGUP_F_main_BB_preheader2_166:
+		next_state = LEGUP_F_main_BB_preheader2_167;
+LEGUP_F_main_BB_preheader2_167:
+		next_state = LEGUP_F_main_BB_preheader2_168;
+LEGUP_F_main_BB_preheader2_168:
+		next_state = LEGUP_F_main_BB_preheader2_169;
+LEGUP_F_main_BB_preheader2_169:
+		next_state = LEGUP_F_main_BB_preheader2_170;
+LEGUP_F_main_BB_preheader2_170:
+		next_state = LEGUP_F_main_BB_preheader2_171;
+LEGUP_F_main_BB_preheader2_171:
+		next_state = LEGUP_F_main_BB_preheader2_172;
+LEGUP_F_main_BB_preheader2_172:
+		next_state = LEGUP_F_main_BB_preheader2_173;
+LEGUP_F_main_BB_preheader2_173:
+		next_state = LEGUP_F_main_BB_preheader2_174;
+LEGUP_F_main_BB_preheader2_174:
+		next_state = LEGUP_F_main_BB_preheader2_175;
+LEGUP_F_main_BB_preheader2_175:
+		next_state = LEGUP_F_main_BB_preheader2_176;
+LEGUP_F_main_BB_preheader2_176:
+		next_state = LEGUP_F_main_BB_preheader2_177;
+LEGUP_F_main_BB_preheader2_177:
+		next_state = LEGUP_F_main_BB_preheader2_178;
+LEGUP_F_main_BB_preheader2_178:
+		next_state = LEGUP_F_main_BB_preheader2_179;
+LEGUP_F_main_BB_preheader2_179:
+		next_state = LEGUP_F_main_BB_preheader2_180;
+LEGUP_F_main_BB_preheader2_180:
+		next_state = LEGUP_F_main_BB_preheader2_181;
+LEGUP_F_main_BB_preheader2_181:
+		next_state = LEGUP_F_main_BB_preheader2_182;
+LEGUP_F_main_BB_preheader2_182:
+		next_state = LEGUP_F_main_BB_preheader2_183;
+LEGUP_F_main_BB_preheader2_183:
+		next_state = LEGUP_F_main_BB_preheader2_184;
+LEGUP_F_main_BB_preheader2_184:
+		next_state = LEGUP_F_main_BB_preheader2_185;
+LEGUP_F_main_BB_preheader2_185:
+		next_state = LEGUP_F_main_BB_preheader2_186;
+LEGUP_F_main_BB_preheader2_186:
+		next_state = LEGUP_F_main_BB_preheader2_187;
+LEGUP_F_main_BB_preheader2_187:
+		next_state = LEGUP_F_main_BB_preheader2_188;
+LEGUP_F_main_BB_preheader2_188:
+		next_state = LEGUP_F_main_BB_preheader2_189;
+LEGUP_F_main_BB_preheader2_189:
+		next_state = LEGUP_F_main_BB_preheader2_190;
+LEGUP_F_main_BB_preheader2_190:
+		next_state = LEGUP_F_main_BB_preheader2_191;
+LEGUP_F_main_BB_preheader2_191:
+		next_state = LEGUP_F_main_BB_preheader2_192;
+LEGUP_F_main_BB_preheader2_192:
+		next_state = LEGUP_F_main_BB_preheader2_193;
+LEGUP_F_main_BB_preheader2_193:
+		next_state = LEGUP_F_main_BB_preheader2_194;
+LEGUP_F_main_BB_preheader2_194:
+		next_state = LEGUP_F_main_BB_preheader2_195;
+LEGUP_F_main_BB_preheader2_195:
+		next_state = LEGUP_F_main_BB_preheader2_196;
+LEGUP_F_main_BB_preheader2_196:
+	if ((main_preheader2_exitcond_reg == 1'd1))
+		next_state = LEGUP_F_main_BB_preheader15iipreheader_197;
+	else if ((main_preheader2_exitcond_reg == 1'd0))
+		next_state = LEGUP_F_main_BB_preheader2_154;
+LEGUP_F_main_BB_preheader2preheader_153:
+		next_state = LEGUP_F_main_BB_preheader2_154;
+LEGUP_F_main_BB_preheader_274:
+		next_state = LEGUP_F_main_BB_preheader_275;
+LEGUP_F_main_BB_preheader_275:
+		next_state = LEGUP_F_main_BB_preheader_276;
+LEGUP_F_main_BB_preheader_276:
+		next_state = LEGUP_F_main_BB_preheader_277;
+LEGUP_F_main_BB_preheader_277:
+	if ((main_preheader_83 == 1'd1))
+		next_state = LEGUP_F_main_BB_linear_sech2exitii_303;
+	else if ((main_preheader_83 == 1'd0))
+		next_state = LEGUP_F_main_BB__84_278;
+LEGUP_F_main_BB_preheaderpreheader_418:
+		next_state = LEGUP_F_main_BB_preheader_274;
+LEGUP_F_main_BB_rotateexiti_419:
+		next_state = LEGUP_F_main_BB_rotateexiti_420;
+LEGUP_F_main_BB_rotateexiti_420:
+		next_state = LEGUP_F_main_BB_rotateexiti_421;
+LEGUP_F_main_BB_rotateexiti_421:
+		next_state = LEGUP_F_main_BB_rotateexiti_422;
+LEGUP_F_main_BB_rotateexiti_422:
+		next_state = LEGUP_F_main_BB_rotateexiti_423;
 LEGUP_F_main_BB_rotateexiti_423:
 		next_state = LEGUP_F_main_BB_rotateexiti_424;
 LEGUP_F_main_BB_rotateexiti_424:
@@ -4261,692 +4161,720 @@ LEGUP_F_main_BB_rotateexiti_493:
 LEGUP_F_main_BB_rotateexiti_494:
 		next_state = LEGUP_F_main_BB_rotateexiti_495;
 LEGUP_F_main_BB_rotateexiti_495:
-		next_state = LEGUP_F_main_BB_rotateexiti_496;
-LEGUP_F_main_BB_rotateexiti_496:
-		next_state = LEGUP_F_main_BB_rotateexiti_497;
-LEGUP_F_main_BB_rotateexiti_497:
-		next_state = LEGUP_F_main_BB_rotateexiti_498;
-LEGUP_F_main_BB_rotateexiti_498:
-		next_state = LEGUP_F_main_BB_rotateexiti_499;
-LEGUP_F_main_BB_rotateexiti_499:
 	if ((main_rotateexiti_orcondiiii == 1'd1))
-		next_state = LEGUP_F_main_BB_normalizeexiti_512;
+		next_state = LEGUP_F_main_BB_normalizeexiti_508;
 	else if ((main_rotateexiti_orcondiiii == 1'd0))
-		next_state = LEGUP_F_main_BB__175_500;
+		next_state = LEGUP_F_main_BB__178_496;
 default:
 	next_state = cur_state;
 endcase
 
 end
 always @(*) begin
-	/* main: %0*/
-	/*   %.pre = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-		main_0_pre = memory_controller_out_a[31:0];
-end
-always @(*) begin
-	/* main: %0*/
-	/*   %.pre8 = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-		main_0_pre8 = memory_controller_out_b[31:0];
-end
-always @(*) begin
 	/* main: %1*/
-	/*   %.in = phi float [ %.pre8, %0 ], [ %w_next.1.0, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_in = main_0_pre8;
+	/*   %2 = phi i32 [ %165, %normalize.exit.i ], [ 1053736672, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_2 = 32'd1053736672;
 	end
 	/* main: %1*/
-	/*   %.in = phi float [ %.pre8, %0 ], [ %w_next.1.0, %normalize.exit.i ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) */ begin
-		main_1_in = main_1_w_next10_reg;
+	/*   %2 = phi i32 [ %165, %normalize.exit.i ], [ 1053736672, %0 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_1_2 = main_rotateexiti_165_reg;
 	end
 end
 always @(posedge clk) begin
 	/* main: %1*/
-	/*   %.in = phi float [ %.pre8, %0 ], [ %w_next.1.0, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_in_reg <= main_1_in;
-		if (start == 1'b0 && ^(main_1_in) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_in_reg"); $finish; end
-	end
-	/* main: %1*/
-	/*   %.in = phi float [ %.pre8, %0 ], [ %w_next.1.0, %normalize.exit.i ]*/
-	if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) begin
-		main_1_in_reg <= main_1_in;
-		if (start == 1'b0 && ^(main_1_in) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_in_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %1*/
-	/*   %.in1 = phi float [ %.pre, %0 ], [ %w_next.0.0, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_in1 = main_0_pre;
-	end
-	/* main: %1*/
-	/*   %.in1 = phi float [ %.pre, %0 ], [ %w_next.0.0, %normalize.exit.i ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) */ begin
-		main_1_in1 = main_1_w_next00_reg;
-	end
-end
-always @(posedge clk) begin
-	/* main: %1*/
-	/*   %.in1 = phi float [ %.pre, %0 ], [ %w_next.0.0, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_in1_reg <= main_1_in1;
-		if (start == 1'b0 && ^(main_1_in1) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_in1_reg"); $finish; end
-	end
-	/* main: %1*/
-	/*   %.in1 = phi float [ %.pre, %0 ], [ %w_next.0.0, %normalize.exit.i ]*/
-	if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) begin
-		main_1_in1_reg <= main_1_in1;
-		if (start == 1'b0 && ^(main_1_in1) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_in1_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %1*/
-	/*   %w_next.1.0 = phi float [ 0x3F8E1B08A0000000, %0 ], [ %196, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_w_next10 = 32'h3C70D845;
-	end
-	/* main: %1*/
-	/*   %w_next.1.0 = phi float [ 0x3F8E1B08A0000000, %0 ], [ %196, %normalize.exit.i ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) */ begin
-		main_1_w_next10 = main_normalizeexiti_196;
-	end
-end
-always @(posedge clk) begin
-	/* main: %1*/
-	/*   %w_next.1.0 = phi float [ 0x3F8E1B08A0000000, %0 ], [ %196, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_w_next10_reg <= main_1_w_next10;
-		if (start == 1'b0 && ^(main_1_w_next10) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_w_next10_reg"); $finish; end
-	end
-	/* main: %1*/
-	/*   %w_next.1.0 = phi float [ 0x3F8E1B08A0000000, %0 ], [ %196, %normalize.exit.i ]*/
-	if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) begin
-		main_1_w_next10_reg <= main_1_w_next10;
-		if (start == 1'b0 && ^(main_1_w_next10) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_w_next10_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %1*/
-	/*   %w_next.0.0 = phi float [ 0xBFF9DB8BA0000000, %0 ], [ %195, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_w_next00 = 32'hBFCEDC5D;
-	end
-	/* main: %1*/
-	/*   %w_next.0.0 = phi float [ 0xBFF9DB8BA0000000, %0 ], [ %195, %normalize.exit.i ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) */ begin
-		main_1_w_next00 = main_normalizeexiti_195_reg;
-	end
-end
-always @(posedge clk) begin
-	/* main: %1*/
-	/*   %w_next.0.0 = phi float [ 0xBFF9DB8BA0000000, %0 ], [ %195, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_w_next00_reg <= main_1_w_next00;
-		if (start == 1'b0 && ^(main_1_w_next00) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_w_next00_reg"); $finish; end
-	end
-	/* main: %1*/
-	/*   %w_next.0.0 = phi float [ 0xBFF9DB8BA0000000, %0 ], [ %195, %normalize.exit.i ]*/
-	if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) begin
-		main_1_w_next00_reg <= main_1_w_next00;
-		if (start == 1'b0 && ^(main_1_w_next00) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_w_next00_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %1*/
-	/*   %2 = phi i32 [ 0, %0 ], [ %162, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
-		main_1_2 = 32'd0;
-	end
-	/* main: %1*/
-	/*   %2 = phi i32 [ 0, %0 ], [ %162, %normalize.exit.i ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) */ begin
-		main_1_2 = main_rotateexiti_162_reg;
-	end
-end
-always @(posedge clk) begin
-	/* main: %1*/
-	/*   %2 = phi i32 [ 0, %0 ], [ %162, %normalize.exit.i ]*/
-	if (((cur_state == LEGUP_F_main_BB__0_3) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %2 = phi i32 [ %165, %normalize.exit.i ], [ 1053736672, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
 		main_1_2_reg <= main_1_2;
 		if (start == 1'b0 && ^(main_1_2) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_2_reg"); $finish; end
 	end
 	/* main: %1*/
-	/*   %2 = phi i32 [ 0, %0 ], [ %162, %normalize.exit.i ]*/
-	if ((((cur_state == LEGUP_F_main_BB_normalizeexiti_549) & (memory_controller_waitrequest == 1'd0)) & (main_normalizeexiti_197_reg == 1'd0))) begin
+	/*   %2 = phi i32 [ %165, %normalize.exit.i ], [ 1053736672, %0 ]*/
+	if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) begin
 		main_1_2_reg <= main_1_2;
 		if (start == 1'b0 && ^(main_1_2) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_2_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_1_3 = main_altfp_multiply_32_0;
+	/* main: %1*/
+	/*   %3 = phi i32 [ %164, %normalize.exit.i ], [ -1122315220, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_3 = -32'd1122315220;
+	end
+	/* main: %1*/
+	/*   %3 = phi i32 [ %164, %normalize.exit.i ], [ -1122315220, %0 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_1_3 = main_rotateexiti_164_reg;
+	end
 end
 always @(posedge clk) begin
 	/* main: %1*/
-	/*   %3 = fmul float %.in1, %w_next.0.0*/
-	if ((cur_state == LEGUP_F_main_BB__1_15)) begin
+	/*   %3 = phi i32 [ %164, %normalize.exit.i ], [ -1122315220, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
 		main_1_3_reg <= main_1_3;
 		if (start == 1'b0 && ^(main_1_3) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
 	end
 	/* main: %1*/
-	/*   %3 = fmul float %.in1, %w_next.0.0*/
-	if ((cur_state == LEGUP_F_main_BB__1_15)) begin
+	/*   %3 = phi i32 [ %164, %normalize.exit.i ], [ -1122315220, %0 ]*/
+	if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) begin
 		main_1_3_reg <= main_1_3;
 		if (start == 1'b0 && ^(main_1_3) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %linear_tanh.exit.i.i*/
-	/*   %74 = fmul float %42, %a.0.i.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_237)) begin
-		main_1_3_reg <= main_linear_tanhexitii_74;
-		if (start == 1'b0 && ^(main_linear_tanhexitii_74) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %linear_tanh.exit.i.i*/
-	/*   %76 = fmul float %41, %75*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_262)) begin
-		main_1_3_reg <= main_linear_tanhexitii_76;
-		if (start == 1'b0 && ^(main_linear_tanhexitii_76) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %32*/
-	/*   %34 = fmul float %w_next.0.0, %33*/
-	if ((cur_state == LEGUP_F_main_BB__32_171)) begin
-		main_1_3_reg <= main_32_34;
-		if (start == 1'b0 && ^(main_32_34) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %linear_sech2.exit.i.i*/
-	/*   %119 = fmul float %80, %a.0.i12.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_318)) begin
-		main_1_3_reg <= main_linear_sech2exitii_119;
-		if (start == 1'b0 && ^(main_linear_sech2exitii_119) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %157 = fmul float %125, %a.0.i.1.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_382)) begin
-		main_1_3_reg <= main_linear_tanhexit1ii_157;
-		if (start == 1'b0 && ^(main_linear_tanhexit1ii_157) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %159 = fmul float %124, %158*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_407)) begin
-		main_1_3_reg <= main_linear_tanhexit1ii_159;
-		if (start == 1'b0 && ^(main_linear_tanhexit1ii_159) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %rotate.exit.i*/
-	/*   %163 = fmul float %w_next.0.0, %121*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_434)) begin
-		main_1_3_reg <= main_rotateexiti_163;
-		if (start == 1'b0 && ^(main_rotateexiti_163) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
-	end
-	/* main: %rotate.exit.i*/
-	/*   %166 = fmul float %165, 5.000000e-01*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_459)) begin
-		main_1_3_reg <= main_rotateexiti_166;
-		if (start == 1'b0 && ^(main_rotateexiti_166) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_3_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_1_4 = main_altfp_add_32_0;
+	/* main: %1*/
+	/*   %4 = phi float [ %6, %normalize.exit.i ], [ 0x3FD9D7DC00000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_4 = 32'h3ECEBEE0;
+	end
+	/* main: %1*/
+	/*   %4 = phi float [ %6, %normalize.exit.i ], [ 0x3FD9D7DC00000000, %0 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_1_4 = main_1_6_reg;
+	end
 end
 always @(posedge clk) begin
 	/* main: %1*/
-	/*   %4 = fadd float %3, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__1_29)) begin
+	/*   %4 = phi float [ %6, %normalize.exit.i ], [ 0x3FD9D7DC00000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
 		main_1_4_reg <= main_1_4;
 		if (start == 1'b0 && ^(main_1_4) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
 	end
 	/* main: %1*/
-	/*   %4 = fadd float %3, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__1_29)) begin
+	/*   %4 = phi float [ %6, %normalize.exit.i ], [ 0x3FD9D7DC00000000, %0 ]*/
+	if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) begin
 		main_1_4_reg <= main_1_4;
 		if (start == 1'b0 && ^(main_1_4) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
 	end
-	/* main: %10*/
-	/*   %12 = fadd float %11, -1.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__10_74)) begin
-		main_1_4_reg <= main_10_12;
-		if (start == 1'b0 && ^(main_10_12) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+end
+always @(*) begin
+	/* main: %1*/
+	/*   %5 = phi float [ %7, %normalize.exit.i ], [ 0xBFA35A8580000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_5 = 32'hBD1AD42C;
 	end
-	/* main: %17*/
-	/*   %19 = fadd float %18, -1.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__17_106)) begin
-		main_1_4_reg <= main_17_19;
-		if (start == 1'b0 && ^(main_17_19) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/* main: %1*/
+	/*   %5 = phi float [ %7, %normalize.exit.i ], [ 0xBFA35A8580000000, %0 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_1_5 = main_1_7_reg;
+	end
+end
+always @(posedge clk) begin
+	/* main: %1*/
+	/*   %5 = phi float [ %7, %normalize.exit.i ], [ 0xBFA35A8580000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_5_reg <= main_1_5;
+		if (start == 1'b0 && ^(main_1_5) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	end
+	/* main: %1*/
+	/*   %5 = phi float [ %7, %normalize.exit.i ], [ 0xBFA35A8580000000, %0 ]*/
+	if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) begin
+		main_1_5_reg <= main_1_5;
+		if (start == 1'b0 && ^(main_1_5) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	end
+end
+always @(*) begin
+	/* main: %1*/
+	/*   %6 = phi float [ %199, %normalize.exit.i ], [ 0x3F8E1B08A0000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_6 = 32'h3C70D845;
+	end
+	/* main: %1*/
+	/*   %6 = phi float [ %199, %normalize.exit.i ], [ 0x3F8E1B08A0000000, %0 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_1_6 = main_normalizeexiti_199;
+	end
+end
+always @(posedge clk) begin
+	/* main: %1*/
+	/*   %6 = phi float [ %199, %normalize.exit.i ], [ 0x3F8E1B08A0000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_6_reg <= main_1_6;
+		if (start == 1'b0 && ^(main_1_6) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_6_reg"); $finish; end
+	end
+	/* main: %1*/
+	/*   %6 = phi float [ %199, %normalize.exit.i ], [ 0x3F8E1B08A0000000, %0 ]*/
+	if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) begin
+		main_1_6_reg <= main_1_6;
+		if (start == 1'b0 && ^(main_1_6) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_6_reg"); $finish; end
+	end
+end
+always @(*) begin
+	/* main: %1*/
+	/*   %7 = phi float [ %198, %normalize.exit.i ], [ 0xBFF9DB8BA0000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_7 = 32'hBFCEDC5D;
+	end
+	/* main: %1*/
+	/*   %7 = phi float [ %198, %normalize.exit.i ], [ 0xBFF9DB8BA0000000, %0 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_1_7 = main_normalizeexiti_198_reg;
+	end
+end
+always @(posedge clk) begin
+	/* main: %1*/
+	/*   %7 = phi float [ %198, %normalize.exit.i ], [ 0xBFF9DB8BA0000000, %0 ]*/
+	if ((((cur_state == LEGUP_0) & (memory_controller_waitrequest == 1'd0)) & (start == 1'd1))) begin
+		main_1_7_reg <= main_1_7;
+		if (start == 1'b0 && ^(main_1_7) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_7_reg"); $finish; end
+	end
+	/* main: %1*/
+	/*   %7 = phi float [ %198, %normalize.exit.i ], [ 0xBFF9DB8BA0000000, %0 ]*/
+	if (((cur_state == LEGUP_F_main_BB_normalizeexiti_545) & (memory_controller_waitrequest == 1'd0))) begin
+		main_1_7_reg <= main_1_7;
+		if (start == 1'b0 && ^(main_1_7) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_7_reg"); $finish; end
+	end
+end
+always @(*) begin
+	main_1_8 = main_altfp_multiply_32_0;
+end
+always @(posedge clk) begin
+	/* main: %1*/
+	/*   %8 = fmul float %5, %7*/
+	if ((cur_state == LEGUP_F_main_BB__1_12)) begin
+		main_1_8_reg <= main_1_8;
+		if (start == 1'b0 && ^(main_1_8) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
+	end
+	/* main: %1*/
+	/*   %8 = fmul float %5, %7*/
+	if ((cur_state == LEGUP_F_main_BB__1_12)) begin
+		main_1_8_reg <= main_1_8;
+		if (start == 1'b0 && ^(main_1_8) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
+	end
+	/* main: %.preheader2*/
+	/*   %36 = fmul float %7, %35*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_167)) begin
+		main_1_8_reg <= main_preheader2_36;
+		if (start == 1'b0 && ^(main_preheader2_36) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %75 = fadd float %74, %b.0.i.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_251)) begin
-		main_1_4_reg <= main_linear_tanhexitii_75;
-		if (start == 1'b0 && ^(main_linear_tanhexitii_75) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/*   %76 = fmul float %44, %a.0.i.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_233)) begin
+		main_1_8_reg <= main_linear_tanhexitii_76;
+		if (start == 1'b0 && ^(main_linear_tanhexitii_76) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
 	end
-	/* main: %23*/
-	/*   %25 = fadd float %24, -1.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__23_137)) begin
-		main_1_4_reg <= main_23_25;
-		if (start == 1'b0 && ^(main_23_25) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
-	end
-	/* main: %32*/
-	/*   %35 = fadd float %34, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__32_185)) begin
-		main_1_4_reg <= main_32_35;
-		if (start == 1'b0 && ^(main_32_35) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/* main: %linear_tanh.exit.i.i*/
+	/*   %78 = fmul float %43, %77*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_258)) begin
+		main_1_8_reg <= main_linear_tanhexitii_78;
+		if (start == 1'b0 && ^(main_linear_tanhexitii_78) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %120 = fadd float %119, %b.0.i13.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_332)) begin
-		main_1_4_reg <= main_linear_sech2exitii_120;
-		if (start == 1'b0 && ^(main_linear_sech2exitii_120) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/*   %121 = fmul float %82, %a.0.i12.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_314)) begin
+		main_1_8_reg <= main_linear_sech2exitii_121;
+		if (start == 1'b0 && ^(main_linear_sech2exitii_121) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %158 = fadd float %157, %b.0.i.1.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_396)) begin
-		main_1_4_reg <= main_linear_tanhexit1ii_158;
-		if (start == 1'b0 && ^(main_linear_tanhexit1ii_158) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/*   %159 = fmul float %127, %a.0.i.1.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_378)) begin
+		main_1_8_reg <= main_linear_tanhexit1ii_159;
+		if (start == 1'b0 && ^(main_linear_tanhexit1ii_159) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
+	end
+	/* main: %linear_tanh.exit.1.i.i*/
+	/*   %161 = fmul float %126, %160*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_403)) begin
+		main_1_8_reg <= main_linear_tanhexit1ii_161;
+		if (start == 1'b0 && ^(main_linear_tanhexit1ii_161) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
 	end
 	/* main: %rotate.exit.i*/
-	/*   %170 = fadd float %169, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_484)) begin
-		main_1_4_reg <= main_rotateexiti_170;
-		if (start == 1'b0 && ^(main_rotateexiti_170) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/*   %166 = fmul float %7, %123*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_430)) begin
+		main_1_8_reg <= main_rotateexiti_166;
+		if (start == 1'b0 && ^(main_rotateexiti_166) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
+	end
+	/* main: %rotate.exit.i*/
+	/*   %169 = fmul float %168, 5.000000e-01*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_455)) begin
+		main_1_8_reg <= main_rotateexiti_169;
+		if (start == 1'b0 && ^(main_rotateexiti_169) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_8_reg"); $finish; end
+	end
+end
+always @(*) begin
+	main_1_9 = main_altfp_add_32_0;
+end
+always @(posedge clk) begin
+	/* main: %1*/
+	/*   %9 = fadd float %8, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__1_26)) begin
+		main_1_9_reg <= main_1_9;
+		if (start == 1'b0 && ^(main_1_9) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %1*/
+	/*   %9 = fadd float %8, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__1_26)) begin
+		main_1_9_reg <= main_1_9;
+		if (start == 1'b0 && ^(main_1_9) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %15*/
+	/*   %17 = fadd float %16, -1.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__15_71)) begin
+		main_1_9_reg <= main_15_17;
+		if (start == 1'b0 && ^(main_15_17) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %22*/
+	/*   %24 = fadd float %23, -1.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__22_103)) begin
+		main_1_9_reg <= main_22_24;
+		if (start == 1'b0 && ^(main_22_24) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %28*/
+	/*   %30 = fadd float %29, -1.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__28_134)) begin
+		main_1_9_reg <= main_28_30;
+		if (start == 1'b0 && ^(main_28_30) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %.preheader2*/
+	/*   %37 = fadd float %36, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_181)) begin
+		main_1_9_reg <= main_preheader2_37;
+		if (start == 1'b0 && ^(main_preheader2_37) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %linear_tanh.exit.i.i*/
+	/*   %77 = fadd float %76, %b.0.i.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_247)) begin
+		main_1_9_reg <= main_linear_tanhexitii_77;
+		if (start == 1'b0 && ^(main_linear_tanhexitii_77) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %linear_sech2.exit.i.i*/
+	/*   %122 = fadd float %121, %b.0.i13.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_328)) begin
+		main_1_9_reg <= main_linear_sech2exitii_122;
+		if (start == 1'b0 && ^(main_linear_sech2exitii_122) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %linear_tanh.exit.1.i.i*/
+	/*   %160 = fadd float %159, %b.0.i.1.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_392)) begin
+		main_1_9_reg <= main_linear_tanhexit1ii_160;
+		if (start == 1'b0 && ^(main_linear_tanhexit1ii_160) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
+	end
+	/* main: %rotate.exit.i*/
+	/*   %173 = fadd float %172, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_480)) begin
+		main_1_9_reg <= main_rotateexiti_173;
+		if (start == 1'b0 && ^(main_rotateexiti_173) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %194 = fadd float %193, %b.0.i.i.i.i*/
-	if ((cur_state == LEGUP_F_main_BB_normalizeexiti_537)) begin
-		main_1_4_reg <= main_normalizeexiti_194;
-		if (start == 1'b0 && ^(main_normalizeexiti_194) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_4_reg"); $finish; end
+	/*   %197 = fadd float %196, %b.0.i.i.i.i*/
+	if ((cur_state == LEGUP_F_main_BB_normalizeexiti_533)) begin
+		main_1_9_reg <= main_normalizeexiti_197;
+		if (start == 1'b0 && ^(main_normalizeexiti_197) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_9_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_1_5 = main_altfp_multiply_32_0;
+	main_1_10 = main_altfp_multiply_32_0;
 end
 always @(posedge clk) begin
 	/* main: %1*/
-	/*   %5 = fmul float %.in, %w_next.1.0*/
-	if ((cur_state == LEGUP_F_main_BB__1_16)) begin
-		main_1_5_reg <= main_1_5;
-		if (start == 1'b0 && ^(main_1_5) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	/*   %10 = fmul float %4, %6*/
+	if ((cur_state == LEGUP_F_main_BB__1_13)) begin
+		main_1_10_reg <= main_1_10;
+		if (start == 1'b0 && ^(main_1_10) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_10_reg"); $finish; end
 	end
 	/* main: %1*/
-	/*   %5 = fmul float %.in, %w_next.1.0*/
-	if ((cur_state == LEGUP_F_main_BB__1_16)) begin
-		main_1_5_reg <= main_1_5;
-		if (start == 1'b0 && ^(main_1_5) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	/*   %10 = fmul float %4, %6*/
+	if ((cur_state == LEGUP_F_main_BB__1_13)) begin
+		main_1_10_reg <= main_1_10;
+		if (start == 1'b0 && ^(main_1_10) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_10_reg"); $finish; end
 	end
-	/* main: %32*/
-	/*   %37 = fmul float %w_next.1.0, %36*/
-	if ((cur_state == LEGUP_F_main_BB__32_172)) begin
-		main_1_5_reg <= main_32_37;
-		if (start == 1'b0 && ^(main_32_37) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %39 = fmul float %6, %38*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_168)) begin
+		main_1_10_reg <= main_preheader2_39;
+		if (start == 1'b0 && ^(main_preheader2_39) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_10_reg"); $finish; end
 	end
 	/* main: %rotate.exit.i*/
-	/*   %164 = fmul float %w_next.1.0, %121*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_435)) begin
-		main_1_5_reg <= main_rotateexiti_164;
-		if (start == 1'b0 && ^(main_rotateexiti_164) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	/*   %167 = fmul float %6, %123*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_431)) begin
+		main_1_10_reg <= main_rotateexiti_167;
+		if (start == 1'b0 && ^(main_rotateexiti_167) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_10_reg"); $finish; end
 	end
 	/* main: %rotate.exit.i*/
-	/*   %168 = fmul float %167, 5.000000e-01*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_471)) begin
-		main_1_5_reg <= main_rotateexiti_168;
-		if (start == 1'b0 && ^(main_rotateexiti_168) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_5_reg"); $finish; end
+	/*   %171 = fmul float %170, 5.000000e-01*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_467)) begin
+		main_1_10_reg <= main_rotateexiti_171;
+		if (start == 1'b0 && ^(main_rotateexiti_171) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_10_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_1_6 = main_altfp_add_32_0;
+	main_1_11 = main_altfp_add_32_0;
 end
 always @(posedge clk) begin
 	/* main: %1*/
-	/*   %6 = fadd float %4, %5*/
-	if ((cur_state == LEGUP_F_main_BB__1_43)) begin
-		main_1_6_reg <= main_1_6;
-		if (start == 1'b0 && ^(main_1_6) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_6_reg"); $finish; end
+	/*   %11 = fadd float %9, %10*/
+	if ((cur_state == LEGUP_F_main_BB__1_40)) begin
+		main_1_11_reg <= main_1_11;
+		if (start == 1'b0 && ^(main_1_11) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_11_reg"); $finish; end
 	end
 	/* main: %1*/
-	/*   %6 = fadd float %4, %5*/
-	if ((cur_state == LEGUP_F_main_BB__1_43)) begin
-		main_1_6_reg <= main_1_6;
-		if (start == 1'b0 && ^(main_1_6) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_6_reg"); $finish; end
+	/*   %11 = fadd float %9, %10*/
+	if ((cur_state == LEGUP_F_main_BB__1_40)) begin
+		main_1_11_reg <= main_1_11;
+		if (start == 1'b0 && ^(main_1_11) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_11_reg"); $finish; end
 	end
-	/* main: %32*/
-	/*   %38 = fadd float %35, %37*/
-	if ((cur_state == LEGUP_F_main_BB__32_199)) begin
-		main_1_6_reg <= main_32_38;
-		if (start == 1'b0 && ^(main_32_38) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_6_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %40 = fadd float %37, %39*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_195)) begin
+		main_1_11_reg <= main_preheader2_40;
+		if (start == 1'b0 && ^(main_preheader2_40) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_11_reg"); $finish; end
 	end
 	/* main: %rotate.exit.i*/
-	/*   %172 = fadd float %170, %171*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_498)) begin
-		main_1_6_reg <= main_rotateexiti_172;
-		if (start == 1'b0 && ^(main_rotateexiti_172) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_6_reg"); $finish; end
+	/*   %175 = fadd float %173, %174*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_494)) begin
+		main_1_11_reg <= main_rotateexiti_175;
+		if (start == 1'b0 && ^(main_rotateexiti_175) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_11_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_1_7 = altfp_compare32_1_main_1_7_out;
+	main_1_12 = altfp_compare32_1_main_1_12_out;
 end
 always @(posedge clk) begin
 	/* main: %1*/
-	/*   %7 = fcmp ogt float %6, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__1_44)) begin
-		main_1_7_reg <= main_1_7;
-		if (start == 1'b0 && ^(main_1_7) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_7_reg"); $finish; end
+	/*   %12 = fcmp ogt float %11, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__1_41)) begin
+		main_1_12_reg <= main_1_12;
+		if (start == 1'b0 && ^(main_1_12) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_12_reg"); $finish; end
 	end
 	/* main: %1*/
-	/*   %7 = fcmp ogt float %6, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__1_44)) begin
-		main_1_7_reg <= main_1_7;
-		if (start == 1'b0 && ^(main_1_7) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_7_reg"); $finish; end
+	/*   %12 = fcmp ogt float %11, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__1_41)) begin
+		main_1_12_reg <= main_1_12;
+		if (start == 1'b0 && ^(main_1_12) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_1_12_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_8_9 = main_altfp_subtract_32_0;
+	main_13_14 = main_altfp_subtract_32_0;
 end
 always @(*) begin
-	/* main: %10*/
-	/*   %11 = phi float [ %9, %8 ], [ %6, %1 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__1_44) & (memory_controller_waitrequest == 1'd0)) & (main_1_7 == 1'd1))) begin
-		main_10_11 = main_1_6_reg;
+	/* main: %15*/
+	/*   %16 = phi float [ %14, %13 ], [ %11, %1 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__1_41) & (memory_controller_waitrequest == 1'd0)) & (main_1_12 == 1'd1))) begin
+		main_15_16 = main_1_11_reg;
 	end
-	/* main: %10*/
-	/*   %11 = phi float [ %9, %8 ], [ %6, %1 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__8_59) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_10_11 = main_8_9;
+	/* main: %15*/
+	/*   %16 = phi float [ %14, %13 ], [ %11, %1 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__13_56) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_15_16 = main_13_14;
 	end
 end
 always @(posedge clk) begin
-	/* main: %10*/
-	/*   %11 = phi float [ %9, %8 ], [ %6, %1 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__1_44) & (memory_controller_waitrequest == 1'd0)) & (main_1_7 == 1'd1))) begin
-		main_10_11_reg <= main_10_11;
-		if (start == 1'b0 && ^(main_10_11) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_10_11_reg"); $finish; end
+	/* main: %15*/
+	/*   %16 = phi float [ %14, %13 ], [ %11, %1 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__1_41) & (memory_controller_waitrequest == 1'd0)) & (main_1_12 == 1'd1))) begin
+		main_15_16_reg <= main_15_16;
+		if (start == 1'b0 && ^(main_15_16) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_15_16_reg"); $finish; end
 	end
-	/* main: %10*/
-	/*   %11 = phi float [ %9, %8 ], [ %6, %1 ]*/
-	if (((cur_state == LEGUP_F_main_BB__8_59) & (memory_controller_waitrequest == 1'd0))) begin
-		main_10_11_reg <= main_10_11;
-		if (start == 1'b0 && ^(main_10_11) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_10_11_reg"); $finish; end
+	/* main: %15*/
+	/*   %16 = phi float [ %14, %13 ], [ %11, %1 ]*/
+	if (((cur_state == LEGUP_F_main_BB__13_56) & (memory_controller_waitrequest == 1'd0))) begin
+		main_15_16_reg <= main_15_16;
+		if (start == 1'b0 && ^(main_15_16) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_15_16_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_10_12 = main_altfp_add_32_0;
+	main_15_17 = main_altfp_add_32_0;
 end
 always @(*) begin
-	main_10_13 = altfp_compare32_1_main_10_13_out;
+	main_15_18 = altfp_compare32_1_main_15_18_out;
 end
 always @(*) begin
-	main_15_16 = main_altfp_subtract_32_0;
+	main_20_21 = main_altfp_subtract_32_0;
 end
 always @(*) begin
-	/* main: %17*/
-	/*   %18 = phi float [ %16, %15 ], [ %6, %14 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__14_76) & (memory_controller_waitrequest == 1'd0)) & (main_1_7_reg == 1'd1))) begin
-		main_17_18 = main_1_6_reg;
+	/* main: %22*/
+	/*   %23 = phi float [ %21, %20 ], [ %11, %19 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__19_73) & (memory_controller_waitrequest == 1'd0)) & (main_1_12_reg == 1'd1))) begin
+		main_22_23 = main_1_11_reg;
 	end
-	/* main: %17*/
-	/*   %18 = phi float [ %16, %15 ], [ %6, %14 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__15_91) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_17_18 = main_15_16;
+	/* main: %22*/
+	/*   %23 = phi float [ %21, %20 ], [ %11, %19 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__20_88) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_22_23 = main_20_21;
 	end
 end
 always @(posedge clk) begin
-	/* main: %17*/
-	/*   %18 = phi float [ %16, %15 ], [ %6, %14 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__14_76) & (memory_controller_waitrequest == 1'd0)) & (main_1_7_reg == 1'd1))) begin
-		main_17_18_reg <= main_17_18;
-		if (start == 1'b0 && ^(main_17_18) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_17_18_reg"); $finish; end
+	/* main: %22*/
+	/*   %23 = phi float [ %21, %20 ], [ %11, %19 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__19_73) & (memory_controller_waitrequest == 1'd0)) & (main_1_12_reg == 1'd1))) begin
+		main_22_23_reg <= main_22_23;
+		if (start == 1'b0 && ^(main_22_23) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_22_23_reg"); $finish; end
 	end
-	/* main: %17*/
-	/*   %18 = phi float [ %16, %15 ], [ %6, %14 ]*/
-	if (((cur_state == LEGUP_F_main_BB__15_91) & (memory_controller_waitrequest == 1'd0))) begin
-		main_17_18_reg <= main_17_18;
-		if (start == 1'b0 && ^(main_17_18) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_17_18_reg"); $finish; end
+	/* main: %22*/
+	/*   %23 = phi float [ %21, %20 ], [ %11, %19 ]*/
+	if (((cur_state == LEGUP_F_main_BB__20_88) & (memory_controller_waitrequest == 1'd0))) begin
+		main_22_23_reg <= main_22_23;
+		if (start == 1'b0 && ^(main_22_23) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_22_23_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_17_19 = main_altfp_add_32_0;
+	main_22_24 = main_altfp_add_32_0;
 end
 always @(*) begin
-	main_21_22 = main_altfp_subtract_32_0;
+	main_26_27 = main_altfp_subtract_32_0;
 end
 always @(*) begin
-	/* main: %23*/
-	/*   %24 = phi float [ %22, %21 ], [ %6, %20 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__20_107) & (memory_controller_waitrequest == 1'd0)) & (main_1_7_reg == 1'd1))) begin
-		main_23_24 = main_1_6_reg;
+	/* main: %28*/
+	/*   %29 = phi float [ %27, %26 ], [ %11, %25 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__25_104) & (memory_controller_waitrequest == 1'd0)) & (main_1_12_reg == 1'd1))) begin
+		main_28_29 = main_1_11_reg;
 	end
-	/* main: %23*/
-	/*   %24 = phi float [ %22, %21 ], [ %6, %20 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__21_122) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_23_24 = main_21_22;
+	/* main: %28*/
+	/*   %29 = phi float [ %27, %26 ], [ %11, %25 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__26_119) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_28_29 = main_26_27;
 	end
 end
 always @(posedge clk) begin
-	/* main: %23*/
-	/*   %24 = phi float [ %22, %21 ], [ %6, %20 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__20_107) & (memory_controller_waitrequest == 1'd0)) & (main_1_7_reg == 1'd1))) begin
-		main_23_24_reg <= main_23_24;
-		if (start == 1'b0 && ^(main_23_24) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_23_24_reg"); $finish; end
+	/* main: %28*/
+	/*   %29 = phi float [ %27, %26 ], [ %11, %25 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__25_104) & (memory_controller_waitrequest == 1'd0)) & (main_1_12_reg == 1'd1))) begin
+		main_28_29_reg <= main_28_29;
+		if (start == 1'b0 && ^(main_28_29) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_28_29_reg"); $finish; end
 	end
-	/* main: %23*/
-	/*   %24 = phi float [ %22, %21 ], [ %6, %20 ]*/
-	if (((cur_state == LEGUP_F_main_BB__21_122) & (memory_controller_waitrequest == 1'd0))) begin
-		main_23_24_reg <= main_23_24;
-		if (start == 1'b0 && ^(main_23_24) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_23_24_reg"); $finish; end
+	/* main: %28*/
+	/*   %29 = phi float [ %27, %26 ], [ %11, %25 ]*/
+	if (((cur_state == LEGUP_F_main_BB__26_119) & (memory_controller_waitrequest == 1'd0))) begin
+		main_28_29_reg <= main_28_29;
+		if (start == 1'b0 && ^(main_28_29) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_28_29_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_23_25 = main_altfp_add_32_0;
+	main_28_30 = main_altfp_add_32_0;
 end
 always @(*) begin
-	main_23_26 = main_altfp_subtract_32_0;
+	main_28_31 = main_altfp_subtract_32_0;
 end
 always @(posedge clk) begin
-	/* main: %23*/
-	/*   %26 = fsub float -0.000000e+00, %25*/
-	if ((cur_state == LEGUP_F_main_BB__23_151)) begin
-		main_23_26_reg <= main_23_26;
-		if (start == 1'b0 && ^(main_23_26) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_23_26_reg"); $finish; end
+	/* main: %28*/
+	/*   %31 = fsub float -0.000000e+00, %30*/
+	if ((cur_state == LEGUP_F_main_BB__28_148)) begin
+		main_28_31_reg <= main_28_31;
+		if (start == 1'b0 && ^(main_28_31) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_28_31_reg"); $finish; end
 	end
-	/* main: %23*/
-	/*   %26 = fsub float -0.000000e+00, %25*/
-	if ((cur_state == LEGUP_F_main_BB__23_151)) begin
-		main_23_26_reg <= main_23_26;
-		if (start == 1'b0 && ^(main_23_26) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_23_26_reg"); $finish; end
+	/* main: %28*/
+	/*   %31 = fsub float -0.000000e+00, %30*/
+	if ((cur_state == LEGUP_F_main_BB__28_148)) begin
+		main_28_31_reg <= main_28_31;
+		if (start == 1'b0 && ^(main_28_31) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_28_31_reg"); $finish; end
 	end
 	/* main: %rotate.exit.i*/
-	/*   %167 = fsub float %160, %164*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_449)) begin
-		main_23_26_reg <= main_rotateexiti_167;
-		if (start == 1'b0 && ^(main_rotateexiti_167) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_23_26_reg"); $finish; end
+	/*   %170 = fsub float %162, %167*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_445)) begin
+		main_28_31_reg <= main_rotateexiti_170;
+		if (start == 1'b0 && ^(main_rotateexiti_170) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_28_31_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %converged.exit.i*/
-	/*   %27 = phi float [ %19, %17 ], [ %26, %23 ]*/
-	if (((cur_state == LEGUP_F_main_BB__17_106) & (memory_controller_waitrequest == 1'd0))) begin
-		main_convergedexiti_27 = main_17_19;
+	/*   %32 = phi float [ %24, %22 ], [ %31, %28 ]*/
+	if (((cur_state == LEGUP_F_main_BB__22_103) & (memory_controller_waitrequest == 1'd0))) begin
+		main_convergedexiti_32 = main_22_24;
 	end
 	/* main: %converged.exit.i*/
-	/*   %27 = phi float [ %19, %17 ], [ %26, %23 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__23_151) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_convergedexiti_27 = main_23_26;
+	/*   %32 = phi float [ %24, %22 ], [ %31, %28 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__28_148) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_convergedexiti_32 = main_28_31;
 	end
 end
 always @(posedge clk) begin
 	/* main: %converged.exit.i*/
-	/*   %27 = phi float [ %19, %17 ], [ %26, %23 ]*/
-	if (((cur_state == LEGUP_F_main_BB__17_106) & (memory_controller_waitrequest == 1'd0))) begin
-		main_convergedexiti_27_reg <= main_convergedexiti_27;
-		if (start == 1'b0 && ^(main_convergedexiti_27) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_27_reg"); $finish; end
+	/*   %32 = phi float [ %24, %22 ], [ %31, %28 ]*/
+	if (((cur_state == LEGUP_F_main_BB__22_103) & (memory_controller_waitrequest == 1'd0))) begin
+		main_convergedexiti_32_reg <= main_convergedexiti_32;
+		if (start == 1'b0 && ^(main_convergedexiti_32) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_32_reg"); $finish; end
 	end
 	/* main: %converged.exit.i*/
-	/*   %27 = phi float [ %19, %17 ], [ %26, %23 ]*/
-	if (((cur_state == LEGUP_F_main_BB__23_151) & (memory_controller_waitrequest == 1'd0))) begin
-		main_convergedexiti_27_reg <= main_convergedexiti_27;
-		if (start == 1'b0 && ^(main_convergedexiti_27) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_27_reg"); $finish; end
+	/*   %32 = phi float [ %24, %22 ], [ %31, %28 ]*/
+	if (((cur_state == LEGUP_F_main_BB__28_148) & (memory_controller_waitrequest == 1'd0))) begin
+		main_convergedexiti_32_reg <= main_convergedexiti_32;
+		if (start == 1'b0 && ^(main_convergedexiti_32) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_32_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_convergedexiti_28 = main_altfp_extend_32_0;
+	main_convergedexiti_33 = main_altfp_extend_32_0;
 end
-always @(*) begin
-	main_convergedexiti_29 = altfp_compare64_1_main_convergedexiti_29_out;
-end
-always @(*) begin
-	/* main: %32*/
-	/*   %t.025.i.i = phi i32 [ 0, %30 ], [ %39, %32 ]*/
-	if (((cur_state == LEGUP_F_main_BB__30_157) & (memory_controller_waitrequest == 1'd0))) begin
-		main_32_t025ii = 32'd0;
+always @(posedge clk) begin
+	/* main: %converged.exit.i*/
+	/*   %33 = fpext float %32 to double*/
+	if ((cur_state == LEGUP_F_main_BB_convergedexiti_151)) begin
+		main_convergedexiti_33_reg <= main_convergedexiti_33;
+		if (start == 1'b0 && ^(main_convergedexiti_33) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_33_reg"); $finish; end
 	end
-	/* main: %32*/
-	/*   %t.025.i.i = phi i32 [ 0, %30 ], [ %39, %32 ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB__32_200) & (memory_controller_waitrequest == 1'd0)) & (main_32_exitcond_reg == 1'd0))) */ begin
-		main_32_t025ii = main_32_39_reg;
+	/* main: %converged.exit.i*/
+	/*   %33 = fpext float %32 to double*/
+	if ((cur_state == LEGUP_F_main_BB_convergedexiti_151)) begin
+		main_convergedexiti_33_reg <= main_convergedexiti_33;
+		if (start == 1'b0 && ^(main_convergedexiti_33) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_33_reg"); $finish; end
+	end
+	/* main: %90*/
+	/*   %91 = fpext float %82 to double*/
+	if ((cur_state == LEGUP_F_main_BB__90_284)) begin
+		main_convergedexiti_33_reg <= main_90_91;
+		if (start == 1'b0 && ^(main_90_91) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_convergedexiti_33_reg"); $finish; end
+	end
+end
+always @(*) begin
+	main_convergedexiti_34 = altfp_compare64_1_main_convergedexiti_34_out;
+end
+always @(*) begin
+	/* main: %.preheader2*/
+	/*   %t.025.i.i = phi i32 [ %41, %.preheader2 ], [ 0, %.preheader2.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader2preheader_153) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader2_t025ii = 32'd0;
+	end
+	/* main: %.preheader2*/
+	/*   %t.025.i.i = phi i32 [ %41, %.preheader2 ], [ 0, %.preheader2.preheader ]*/
+	else /* if ((((cur_state == LEGUP_F_main_BB_preheader2_196) & (memory_controller_waitrequest == 1'd0)) & (main_preheader2_exitcond_reg == 1'd0))) */ begin
+		main_preheader2_t025ii = main_preheader2_41_reg;
 	end
 end
 always @(posedge clk) begin
-	/* main: %32*/
-	/*   %t.025.i.i = phi i32 [ 0, %30 ], [ %39, %32 ]*/
-	if (((cur_state == LEGUP_F_main_BB__30_157) & (memory_controller_waitrequest == 1'd0))) begin
-		main_32_t025ii_reg <= main_32_t025ii;
-		if (start == 1'b0 && ^(main_32_t025ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_32_t025ii_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %t.025.i.i = phi i32 [ %41, %.preheader2 ], [ 0, %.preheader2.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader2preheader_153) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader2_t025ii_reg <= main_preheader2_t025ii;
+		if (start == 1'b0 && ^(main_preheader2_t025ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader2_t025ii_reg"); $finish; end
 	end
-	/* main: %32*/
-	/*   %t.025.i.i = phi i32 [ 0, %30 ], [ %39, %32 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__32_200) & (memory_controller_waitrequest == 1'd0)) & (main_32_exitcond_reg == 1'd0))) begin
-		main_32_t025ii_reg <= main_32_t025ii;
-		if (start == 1'b0 && ^(main_32_t025ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_32_t025ii_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %t.025.i.i = phi i32 [ %41, %.preheader2 ], [ 0, %.preheader2.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader2_196) & (memory_controller_waitrequest == 1'd0)) & (main_preheader2_exitcond_reg == 1'd0))) begin
+		main_preheader2_t025ii_reg <= main_preheader2_t025ii;
+		if (start == 1'b0 && ^(main_preheader2_t025ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader2_t025ii_reg"); $finish; end
 	end
 end
 always @(*) begin
-	/* main: %32*/
+	/* main: %.preheader2*/
 	/*   %scevgep = getelementptr [2 x [64 x float]]* @whitened_signals, i32 0, i32 1, i32 %t.025.i.i*/
-		main_32_scevgep = (`TAG_g_whitened_signals_a + ((256 * 32'd1) + (4 * main_32_t025ii_reg)));
+		main_preheader2_scevgep = (`TAG_g_whitened_signals_a + ((256 * 32'd1) + (4 * main_preheader2_t025ii_reg)));
 end
 always @(*) begin
-	/* main: %32*/
+	/* main: %.preheader2*/
 	/*   %scevgep1 = getelementptr [2 x [64 x float]]* @whitened_signals, i32 0, i32 0, i32 %t.025.i.i*/
-		main_32_scevgep1 = (`TAG_g_whitened_signals_a + (4 * main_32_t025ii_reg));
+		main_preheader2_scevgep1 = (`TAG_g_whitened_signals_a + (4 * main_preheader2_t025ii_reg));
 end
 always @(*) begin
-	/* main: %32*/
+	/* main: %.preheader2*/
 	/*   %scevgep2 = getelementptr [64 x float]* @product_1, i32 0, i32 %t.025.i.i*/
-		main_32_scevgep2 = (`TAG_g_product_1_a + (4 * main_32_t025ii_reg));
+		main_preheader2_scevgep2 = (`TAG_g_product_1_a + (4 * main_preheader2_t025ii_reg));
 end
 always @(posedge clk) begin
-	/* main: %32*/
+	/* main: %.preheader2*/
 	/*   %scevgep2 = getelementptr [64 x float]* @product_1, i32 0, i32 %t.025.i.i*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		main_32_scevgep2_reg <= main_32_scevgep2;
-		if (start == 1'b0 && ^(main_32_scevgep2) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_32_scevgep2_reg"); $finish; end
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
+		main_preheader2_scevgep2_reg <= main_preheader2_scevgep2;
+		if (start == 1'b0 && ^(main_preheader2_scevgep2) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader2_scevgep2_reg"); $finish; end
 	end
 end
 always @(*) begin
-	/* main: %32*/
-	/*   %33 = load float* %scevgep1, align 4, !tbaa !1*/
-		main_32_33 = memory_controller_out_a[31:0];
+	/* main: %.preheader2*/
+	/*   %35 = load float* %scevgep1, align 4, !tbaa !1*/
+		main_preheader2_35 = memory_controller_out_a[31:0];
 end
 always @(*) begin
-	main_32_34 = main_altfp_multiply_32_0;
+	main_preheader2_36 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-	main_32_35 = main_altfp_add_32_0;
+	main_preheader2_37 = main_altfp_add_32_0;
 end
 always @(*) begin
-	/* main: %32*/
-	/*   %36 = load float* %scevgep, align 4, !tbaa !1*/
-		main_32_36 = memory_controller_out_b[31:0];
+	/* main: %.preheader2*/
+	/*   %38 = load float* %scevgep, align 4, !tbaa !1*/
+		main_preheader2_38 = memory_controller_out_b[31:0];
 end
 always @(posedge clk) begin
-	/* main: %32*/
-	/*   %36 = load float* %scevgep, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_160)) begin
-		main_32_36_reg <= main_32_36;
-		if (start == 1'b0 && ^(main_32_36) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_32_36_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %38 = load float* %scevgep, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_156)) begin
+		main_preheader2_38_reg <= main_preheader2_38;
+		if (start == 1'b0 && ^(main_preheader2_38) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader2_38_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_32_37 = main_altfp_multiply_32_0;
+	main_preheader2_39 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-/* main: %32*/
-/*   %37 = fmul float %w_next.1.0, %36*/
-	main_32_37_reg = main_1_5_reg;
+/* main: %.preheader2*/
+/*   %39 = fmul float %6, %38*/
+	main_preheader2_39_reg = main_1_10_reg;
 end
 always @(*) begin
-	main_32_38 = main_altfp_add_32_0;
+	main_preheader2_40 = main_altfp_add_32_0;
 end
 always @(*) begin
-	/* main: %32*/
-	/*   %39 = add nsw i32 %t.025.i.i, 1*/
-		main_32_39 = (main_32_t025ii_reg + 32'd1);
+	/* main: %.preheader2*/
+	/*   %41 = add nsw i32 %t.025.i.i, 1*/
+		main_preheader2_41 = (main_preheader2_t025ii_reg + 32'd1);
 end
 always @(posedge clk) begin
-	/* main: %32*/
-	/*   %39 = add nsw i32 %t.025.i.i, 1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		main_32_39_reg <= main_32_39;
-		if (start == 1'b0 && ^(main_32_39) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_32_39_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %41 = add nsw i32 %t.025.i.i, 1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
+		main_preheader2_41_reg <= main_preheader2_41;
+		if (start == 1'b0 && ^(main_preheader2_41) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader2_41_reg"); $finish; end
 	end
 end
 always @(*) begin
-	/* main: %32*/
-	/*   %exitcond = icmp eq i32 %39, 64*/
-		main_32_exitcond = (main_32_39 == 32'd64);
+	/* main: %.preheader2*/
+	/*   %exitcond = icmp eq i32 %41, 64*/
+		main_preheader2_exitcond = (main_preheader2_41 == 32'd64);
 end
 always @(posedge clk) begin
-	/* main: %32*/
-	/*   %exitcond = icmp eq i32 %39, 64*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		main_32_exitcond_reg <= main_32_exitcond;
-		if (start == 1'b0 && ^(main_32_exitcond) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_32_exitcond_reg"); $finish; end
+	/* main: %.preheader2*/
+	/*   %exitcond = icmp eq i32 %41, 64*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
+		main_preheader2_exitcond_reg <= main_preheader2_exitcond;
+		if (start == 1'b0 && ^(main_preheader2_exitcond) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader2_exitcond_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %.preheader15.i.i*/
-	/*   %40 = phi float [ %77, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_201) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader15ii_40 = 32'h0;
+	/*   %42 = phi float [ %79, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_197) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader15ii_42 = 32'h0;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %40 = phi float [ %77, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_276) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) */ begin
-		main_preheader15ii_40 = main_linear_tanhexitii_77;
+	/*   %42 = phi float [ %79, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
+	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_272) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) */ begin
+		main_preheader15ii_42 = main_linear_tanhexitii_79;
 	end
 end
 always @(posedge clk) begin
 	/* main: %.preheader15.i.i*/
-	/*   %40 = phi float [ %77, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_201) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader15ii_40_reg <= main_preheader15ii_40;
-		if (start == 1'b0 && ^(main_preheader15ii_40) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_40_reg"); $finish; end
+	/*   %42 = phi float [ %79, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_197) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader15ii_42_reg <= main_preheader15ii_42;
+		if (start == 1'b0 && ^(main_preheader15ii_42) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_42_reg"); $finish; end
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %40 = phi float [ %77, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_276) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) begin
-		main_preheader15ii_40_reg <= main_preheader15ii_40;
-		if (start == 1'b0 && ^(main_preheader15ii_40) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_40_reg"); $finish; end
+	/*   %42 = phi float [ %79, %linear_tanh.exit.i.i ], [ 0.000000e+00, %.preheader15.i.i.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_272) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) begin
+		main_preheader15ii_42_reg <= main_preheader15ii_42;
+		if (start == 1'b0 && ^(main_preheader15ii_42) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_42_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %.preheader15.i.i*/
-	/*   %t.119.i.i = phi i32 [ %78, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_201) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %t.119.i.i = phi i32 [ %80, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_197) & (memory_controller_waitrequest == 1'd0))) begin
 		main_preheader15ii_t119ii = 32'd0;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %t.119.i.i = phi i32 [ %78, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_276) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) */ begin
-		main_preheader15ii_t119ii = main_linear_tanhexitii_78_reg;
+	/*   %t.119.i.i = phi i32 [ %80, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
+	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_272) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) */ begin
+		main_preheader15ii_t119ii = main_linear_tanhexitii_80_reg;
 	end
 end
 always @(posedge clk) begin
 	/* main: %.preheader15.i.i*/
-	/*   %t.119.i.i = phi i32 [ %78, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_201) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %t.119.i.i = phi i32 [ %80, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader15iipreheader_197) & (memory_controller_waitrequest == 1'd0))) begin
 		main_preheader15ii_t119ii_reg <= main_preheader15ii_t119ii;
 		if (start == 1'b0 && ^(main_preheader15ii_t119ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_t119ii_reg"); $finish; end
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %t.119.i.i = phi i32 [ %78, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_276) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) begin
+	/*   %t.119.i.i = phi i32 [ %80, %linear_tanh.exit.i.i ], [ 0, %.preheader15.i.i.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexitii_272) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexitii_exitcond3_reg == 1'd0))) begin
 		main_preheader15ii_t119ii_reg <= main_preheader15ii_t119ii;
 		if (start == 1'b0 && ^(main_preheader15ii_t119ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_t119ii_reg"); $finish; end
 	end
@@ -4963,408 +4891,402 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %.preheader15.i.i*/
-	/*   %41 = load float* %scevgep5, align 4, !tbaa !1*/
-		main_preheader15ii_41 = memory_controller_out_a[31:0];
+	/*   %43 = load float* %scevgep5, align 4, !tbaa !1*/
+		main_preheader15ii_43 = memory_controller_out_a[31:0];
 end
 always @(posedge clk) begin
 	/* main: %.preheader15.i.i*/
-	/*   %41 = load float* %scevgep5, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_204)) begin
-		main_preheader15ii_41_reg <= main_preheader15ii_41;
-		if (start == 1'b0 && ^(main_preheader15ii_41) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_41_reg"); $finish; end
+	/*   %43 = load float* %scevgep5, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_200)) begin
+		main_preheader15ii_43_reg <= main_preheader15ii_43;
+		if (start == 1'b0 && ^(main_preheader15ii_43) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_43_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %.preheader15.i.i*/
-	/*   %42 = load float* %scevgep4, align 4, !tbaa !1*/
-		main_preheader15ii_42 = memory_controller_out_b[31:0];
+	/*   %44 = load float* %scevgep4, align 4, !tbaa !1*/
+		main_preheader15ii_44 = memory_controller_out_b[31:0];
 end
 always @(posedge clk) begin
 	/* main: %.preheader15.i.i*/
-	/*   %42 = load float* %scevgep4, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_204)) begin
-		main_preheader15ii_42_reg <= main_preheader15ii_42;
-		if (start == 1'b0 && ^(main_preheader15ii_42) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_42_reg"); $finish; end
+	/*   %44 = load float* %scevgep4, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_200)) begin
+		main_preheader15ii_44_reg <= main_preheader15ii_44;
+		if (start == 1'b0 && ^(main_preheader15ii_44) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader15ii_44_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_preheader15ii_43 = altfp_compare32_1_main_preheader15ii_43_out;
+	main_preheader15ii_45 = altfp_compare32_1_main_preheader15ii_45_out;
 end
 always @(*) begin
-	main_44_45 = altfp_compare32_1_main_44_45_out;
+	main_46_47 = altfp_compare32_1_main_46_47_out;
 end
 always @(*) begin
-	main_44_46 = altfp_compare32_1_main_44_46_out;
+	main_46_48 = altfp_compare32_1_main_46_48_out;
 end
 always @(*) begin
-	/* main: %44*/
-	/*   %or.cond.i.i.i = and i1 %45, %46*/
-		main_44_orcondiii = (main_44_45 & main_44_46);
+	/* main: %46*/
+	/*   %or.cond.i.i.i = and i1 %47, %48*/
+		main_46_orcondiii = (main_46_47 & main_46_48);
 end
 always @(*) begin
-	main_47_48 = altfp_compare32_1_main_47_48_out;
+	main_49_50 = altfp_compare32_1_main_49_50_out;
 end
 always @(*) begin
-	main_47_49 = altfp_compare32_1_main_47_49_out;
+	main_49_51 = altfp_compare32_1_main_49_51_out;
 end
 always @(*) begin
-	/* main: %47*/
-	/*   %or.cond12.i.i.i = and i1 %48, %49*/
-		main_47_orcond12iii = (main_47_48 & main_47_49);
+	/* main: %49*/
+	/*   %or.cond12.i.i.i = and i1 %50, %51*/
+		main_49_orcond12iii = (main_49_50 & main_49_51);
 end
 always @(*) begin
-	main_50_51 = altfp_compare32_1_main_50_51_out;
+	main_52_53 = altfp_compare32_1_main_52_53_out;
 end
 always @(*) begin
-	main_50_52 = altfp_compare32_1_main_50_52_out;
+	main_52_54 = altfp_compare32_1_main_52_54_out;
 end
 always @(*) begin
-	/* main: %50*/
-	/*   %or.cond3.i.i.i = and i1 %51, %52*/
-		main_50_orcond3iii = (main_50_51 & main_50_52);
+	/* main: %52*/
+	/*   %or.cond3.i.i.i = and i1 %53, %54*/
+		main_52_orcond3iii = (main_52_53 & main_52_54);
 end
 always @(*) begin
-	main_53_54 = altfp_compare32_1_main_53_54_out;
+	main_55_56 = altfp_compare32_1_main_55_56_out;
 end
 always @(*) begin
-	main_53_55 = altfp_compare32_1_main_53_55_out;
+	main_55_57 = altfp_compare32_1_main_55_57_out;
 end
 always @(*) begin
-	/* main: %53*/
-	/*   %or.cond13.i.i.i = and i1 %54, %55*/
-		main_53_orcond13iii = (main_53_54 & main_53_55);
+	/* main: %55*/
+	/*   %or.cond13.i.i.i = and i1 %56, %57*/
+		main_55_orcond13iii = (main_55_56 & main_55_57);
 end
 always @(*) begin
-	main_56_57 = altfp_compare32_1_main_56_57_out;
+	main_58_59 = altfp_compare32_1_main_58_59_out;
 end
 always @(*) begin
-	main_56_58 = altfp_compare32_1_main_56_58_out;
+	main_58_60 = altfp_compare32_1_main_58_60_out;
 end
 always @(*) begin
-	/* main: %56*/
-	/*   %or.cond5.i.i.i = and i1 %57, %58*/
-		main_56_orcond5iii = (main_56_57 & main_56_58);
+	/* main: %58*/
+	/*   %or.cond5.i.i.i = and i1 %59, %60*/
+		main_58_orcond5iii = (main_58_59 & main_58_60);
 end
 always @(*) begin
-	main_59_60 = altfp_compare32_1_main_59_60_out;
+	main_61_62 = altfp_compare32_1_main_61_62_out;
 end
 always @(*) begin
-	main_59_61 = altfp_compare32_1_main_59_61_out;
+	main_61_63 = altfp_compare32_1_main_61_63_out;
 end
 always @(*) begin
-	/* main: %59*/
-	/*   %or.cond14.i.i.i = and i1 %60, %61*/
-		main_59_orcond14iii = (main_59_60 & main_59_61);
+	/* main: %61*/
+	/*   %or.cond14.i.i.i = and i1 %62, %63*/
+		main_61_orcond14iii = (main_61_62 & main_61_63);
 end
 always @(*) begin
-	main_62_63 = altfp_compare32_1_main_62_63_out;
+	main_64_65 = altfp_compare32_1_main_64_65_out;
 end
 always @(*) begin
-	main_62_64 = altfp_compare32_1_main_62_64_out;
+	main_64_66 = altfp_compare32_1_main_64_66_out;
 end
 always @(*) begin
-	/* main: %62*/
-	/*   %or.cond7.i.i.i = and i1 %63, %64*/
-		main_62_orcond7iii = (main_62_63 & main_62_64);
+	/* main: %64*/
+	/*   %or.cond7.i.i.i = and i1 %65, %66*/
+		main_64_orcond7iii = (main_64_65 & main_64_66);
 end
 always @(*) begin
-	main_65_66 = altfp_compare32_1_main_65_66_out;
+	main_67_68 = altfp_compare32_1_main_67_68_out;
 end
 always @(*) begin
-	main_65_67 = altfp_compare32_1_main_65_67_out;
+	main_67_69 = altfp_compare32_1_main_67_69_out;
 end
 always @(*) begin
-	/* main: %65*/
-	/*   %or.cond15.i.i.i = and i1 %66, %67*/
-		main_65_orcond15iii = (main_65_66 & main_65_67);
+	/* main: %67*/
+	/*   %or.cond15.i.i.i = and i1 %68, %69*/
+		main_67_orcond15iii = (main_67_68 & main_67_69);
 end
 always @(*) begin
-	main_68_69 = altfp_compare32_1_main_68_69_out;
+	main_70_71 = altfp_compare32_1_main_70_71_out;
 end
 always @(*) begin
-	main_68_70 = altfp_compare32_1_main_68_70_out;
+	main_70_72 = altfp_compare32_1_main_70_72_out;
 end
 always @(*) begin
-	/* main: %68*/
-	/*   %or.cond9.i.i.i = and i1 %69, %70*/
-		main_68_orcond9iii = (main_68_69 & main_68_70);
+	/* main: %70*/
+	/*   %or.cond9.i.i.i = and i1 %71, %72*/
+		main_70_orcond9iii = (main_70_71 & main_70_72);
 end
 always @(*) begin
-	main_71_72 = altfp_compare32_1_main_71_72_out;
+	main_73_74 = altfp_compare32_1_main_73_74_out;
 end
 always @(*) begin
-	main_71_73 = altfp_compare32_1_main_71_73_out;
+	main_73_75 = altfp_compare32_1_main_73_75_out;
 end
 always @(*) begin
-	/* main: %71*/
-	/*   %or.cond11.i.i.i = and i1 %72, %73*/
-		main_71_orcond11iii = (main_71_72 & main_71_73);
+	/* main: %73*/
+	/*   %or.cond11.i.i.i = and i1 %74, %75*/
+		main_73_orcond11iii = (main_73_74 & main_73_75);
 end
 always @(*) begin
-	/* main: %71*/
+	/* main: %73*/
 	/*   %..i.i.i = select i1 %or.cond11.i.i.i, float 0x3F9E000000000000, float 0x3F48000040000000*/
-		main_71_iii = (main_71_orcond11iii ? 32'h3CF00000 : 32'h3A400002);
+		main_73_iii = (main_73_orcond11iii ? 32'h3CF00000 : 32'h3A400002);
 end
 always @(*) begin
-	/* main: %71*/
+	/* main: %73*/
 	/*   %.16.i.i.i = select i1 %or.cond11.i.i.i, float 0x3FED0068E0000000, float 1.000000e+00*/
-		main_71_16iii = (main_71_orcond11iii ? 32'h3F680347 : 32'h3F800000);
+		main_73_16iii = (main_73_orcond11iii ? 32'h3F680347 : 32'h3F800000);
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_205) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_43 == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_201) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_45 == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3A400002;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__44_207) & (memory_controller_waitrequest == 1'd0)) & (main_44_orcondiii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__46_203) & (memory_controller_waitrequest == 1'd0)) & (main_46_orcondiii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3CF00000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__47_209) & (memory_controller_waitrequest == 1'd0)) & (main_47_orcond12iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__49_205) & (memory_controller_waitrequest == 1'd0)) & (main_49_orcond12iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3DED8000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__50_211) & (memory_controller_waitrequest == 1'd0)) & (main_50_orcond3iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__52_207) & (memory_controller_waitrequest == 1'd0)) & (main_52_orcond3iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3E91A000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__53_213) & (memory_controller_waitrequest == 1'd0)) & (main_53_orcond13iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__55_209) & (memory_controller_waitrequest == 1'd0)) & (main_55_orcond13iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3F17D000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__56_215) & (memory_controller_waitrequest == 1'd0)) & (main_56_orcond5iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__58_211) & (memory_controller_waitrequest == 1'd0)) & (main_58_orcond5iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3F73F000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__59_217) & (memory_controller_waitrequest == 1'd0)) & (main_59_orcond14iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__61_213) & (memory_controller_waitrequest == 1'd0)) & (main_61_orcond14iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3F73F000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__62_219) & (memory_controller_waitrequest == 1'd0)) & (main_62_orcond7iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__64_215) & (memory_controller_waitrequest == 1'd0)) & (main_64_orcond7iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3F17D000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__65_221) & (memory_controller_waitrequest == 1'd0)) & (main_65_orcond15iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__67_217) & (memory_controller_waitrequest == 1'd0)) & (main_67_orcond15iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3E91A000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__68_223) & (memory_controller_waitrequest == 1'd0)) & (main_68_orcond9iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__70_219) & (memory_controller_waitrequest == 1'd0)) & (main_70_orcond9iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii = 32'h3DED8000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__71_225) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_linear_tanhexitii_a0iii = main_71_iii;
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__73_221) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_linear_tanhexitii_a0iii = main_73_iii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_205) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_43 == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_201) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_45 == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__44_207) & (memory_controller_waitrequest == 1'd0)) & (main_44_orcondiii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__46_203) & (memory_controller_waitrequest == 1'd0)) & (main_46_orcondiii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__47_209) & (memory_controller_waitrequest == 1'd0)) & (main_47_orcond12iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__49_205) & (memory_controller_waitrequest == 1'd0)) & (main_49_orcond12iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__50_211) & (memory_controller_waitrequest == 1'd0)) & (main_50_orcond3iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__52_207) & (memory_controller_waitrequest == 1'd0)) & (main_52_orcond3iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__53_213) & (memory_controller_waitrequest == 1'd0)) & (main_53_orcond13iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__55_209) & (memory_controller_waitrequest == 1'd0)) & (main_55_orcond13iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__56_215) & (memory_controller_waitrequest == 1'd0)) & (main_56_orcond5iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__58_211) & (memory_controller_waitrequest == 1'd0)) & (main_58_orcond5iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__59_217) & (memory_controller_waitrequest == 1'd0)) & (main_59_orcond14iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__61_213) & (memory_controller_waitrequest == 1'd0)) & (main_61_orcond14iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__62_219) & (memory_controller_waitrequest == 1'd0)) & (main_62_orcond7iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__64_215) & (memory_controller_waitrequest == 1'd0)) & (main_64_orcond7iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__65_221) & (memory_controller_waitrequest == 1'd0)) & (main_65_orcond15iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__67_217) & (memory_controller_waitrequest == 1'd0)) & (main_67_orcond15iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__68_223) & (memory_controller_waitrequest == 1'd0)) & (main_68_orcond9iii == 1'd1))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__70_219) & (memory_controller_waitrequest == 1'd0)) & (main_70_orcond9iii == 1'd1))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %44 ], [ 0x3FBDB00000000000, %47 ], [ 0x3FD2340000000000, %50 ], [ 0x3FE2FA0000000000, %53 ], [ 0x3FEE7E0000000000, %56 ], [ 0x3FEE7E0000000000, %59 ], [ 0x3FE2FA0000000000, %62 ], [ 0x3FD2340000000000, %65 ], [ 0x3FBDB00000000000, %68 ], [ %..i.i.i, %71 ]*/
-	if (((cur_state == LEGUP_F_main_BB__71_225) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %a.0.i.i.i = phi float [ 0x3F48000040000000, %.preheader15.i.i ], [ 0x3F9E000000000000, %46 ], [ 0x3FBDB00000000000, %49 ], [ 0x3FD2340000000000, %52 ], [ 0x3FE2FA0000000000, %55 ], [ 0x3FEE7E0000000000, %58 ], [ 0x3FEE7E0000000000, %61 ], [ 0x3FE2FA0000000000, %64 ], [ 0x3FD2340000000000, %67 ], [ 0x3FBDB00000000000, %70 ], [ %..i.i.i, %73 ]*/
+	if (((cur_state == LEGUP_F_main_BB__73_221) & (memory_controller_waitrequest == 1'd0))) begin
 		main_linear_tanhexitii_a0iii_reg <= main_linear_tanhexitii_a0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_a0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_a0iii_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_205) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_43 == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_201) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_45 == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'hBF800000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__44_207) & (memory_controller_waitrequest == 1'd0)) & (main_44_orcondiii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__46_203) & (memory_controller_waitrequest == 1'd0)) & (main_46_orcondiii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'hBF680347;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__47_209) & (memory_controller_waitrequest == 1'd0)) & (main_47_orcond12iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__49_205) & (memory_controller_waitrequest == 1'd0)) & (main_49_orcond12iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'hBF400000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__50_211) & (memory_controller_waitrequest == 1'd0)) & (main_50_orcond3iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__52_207) & (memory_controller_waitrequest == 1'd0)) & (main_52_orcond3iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'hBF000000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__53_213) & (memory_controller_waitrequest == 1'd0)) & (main_53_orcond13iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__55_209) & (memory_controller_waitrequest == 1'd0)) & (main_55_orcond13iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'hBE400000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__56_215) & (memory_controller_waitrequest == 1'd0)) & (main_56_orcond5iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__58_211) & (memory_controller_waitrequest == 1'd0)) & (main_58_orcond5iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'h0;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__59_217) & (memory_controller_waitrequest == 1'd0)) & (main_59_orcond14iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__61_213) & (memory_controller_waitrequest == 1'd0)) & (main_61_orcond14iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'h0;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__62_219) & (memory_controller_waitrequest == 1'd0)) & (main_62_orcond7iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__64_215) & (memory_controller_waitrequest == 1'd0)) & (main_64_orcond7iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'h3E400000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__65_221) & (memory_controller_waitrequest == 1'd0)) & (main_65_orcond15iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__67_217) & (memory_controller_waitrequest == 1'd0)) & (main_67_orcond15iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'h3F000000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__68_223) & (memory_controller_waitrequest == 1'd0)) & (main_68_orcond9iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__70_219) & (memory_controller_waitrequest == 1'd0)) & (main_70_orcond9iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii = 32'h3F400000;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__71_225) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_linear_tanhexitii_b0iii = main_71_16iii;
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__73_221) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_linear_tanhexitii_b0iii = main_73_16iii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_205) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_43 == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader15ii_201) & (memory_controller_waitrequest == 1'd0)) & (main_preheader15ii_45 == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__44_207) & (memory_controller_waitrequest == 1'd0)) & (main_44_orcondiii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__46_203) & (memory_controller_waitrequest == 1'd0)) & (main_46_orcondiii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__47_209) & (memory_controller_waitrequest == 1'd0)) & (main_47_orcond12iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__49_205) & (memory_controller_waitrequest == 1'd0)) & (main_49_orcond12iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__50_211) & (memory_controller_waitrequest == 1'd0)) & (main_50_orcond3iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__52_207) & (memory_controller_waitrequest == 1'd0)) & (main_52_orcond3iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__53_213) & (memory_controller_waitrequest == 1'd0)) & (main_53_orcond13iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__55_209) & (memory_controller_waitrequest == 1'd0)) & (main_55_orcond13iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__56_215) & (memory_controller_waitrequest == 1'd0)) & (main_56_orcond5iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__58_211) & (memory_controller_waitrequest == 1'd0)) & (main_58_orcond5iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__59_217) & (memory_controller_waitrequest == 1'd0)) & (main_59_orcond14iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__61_213) & (memory_controller_waitrequest == 1'd0)) & (main_61_orcond14iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__62_219) & (memory_controller_waitrequest == 1'd0)) & (main_62_orcond7iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__64_215) & (memory_controller_waitrequest == 1'd0)) & (main_64_orcond7iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__65_221) & (memory_controller_waitrequest == 1'd0)) & (main_65_orcond15iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__67_217) & (memory_controller_waitrequest == 1'd0)) & (main_67_orcond15iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__68_223) & (memory_controller_waitrequest == 1'd0)) & (main_68_orcond9iii == 1'd1))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__70_219) & (memory_controller_waitrequest == 1'd0)) & (main_70_orcond9iii == 1'd1))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %44 ], [ -7.500000e-01, %47 ], [ -5.000000e-01, %50 ], [ -1.875000e-01, %53 ], [ 0.000000e+00, %56 ], [ 0.000000e+00, %59 ], [ 1.875000e-01, %62 ], [ 5.000000e-01, %65 ], [ 7.500000e-01, %68 ], [ %.16.i.i.i, %71 ]*/
-	if (((cur_state == LEGUP_F_main_BB__71_225) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %b.0.i.i.i = phi float [ -1.000000e+00, %.preheader15.i.i ], [ 0xBFED0068E0000000, %46 ], [ -7.500000e-01, %49 ], [ -5.000000e-01, %52 ], [ -1.875000e-01, %55 ], [ 0.000000e+00, %58 ], [ 0.000000e+00, %61 ], [ 1.875000e-01, %64 ], [ 5.000000e-01, %67 ], [ 7.500000e-01, %70 ], [ %.16.i.i.i, %73 ]*/
+	if (((cur_state == LEGUP_F_main_BB__73_221) & (memory_controller_waitrequest == 1'd0))) begin
 		main_linear_tanhexitii_b0iii_reg <= main_linear_tanhexitii_b0iii;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_b0iii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_b0iii_reg"); $finish; end
 	end
-end
-always @(*) begin
-	main_linear_tanhexitii_74 = main_altfp_multiply_32_0;
-end
-always @(*) begin
-	main_linear_tanhexitii_75 = main_altfp_add_32_0;
 end
 always @(*) begin
 	main_linear_tanhexitii_76 = main_altfp_multiply_32_0;
@@ -5372,94 +5294,100 @@ end
 always @(*) begin
 	main_linear_tanhexitii_77 = main_altfp_add_32_0;
 end
+always @(*) begin
+	main_linear_tanhexitii_78 = main_altfp_multiply_32_0;
+end
+always @(*) begin
+	main_linear_tanhexitii_79 = main_altfp_add_32_0;
+end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %77 = fadd float %40, %76*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_276)) begin
-		main_linear_tanhexitii_77_reg <= main_linear_tanhexitii_77;
-		if (start == 1'b0 && ^(main_linear_tanhexitii_77) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_77_reg"); $finish; end
+	/*   %79 = fadd float %42, %78*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_272)) begin
+		main_linear_tanhexitii_79_reg <= main_linear_tanhexitii_79;
+		if (start == 1'b0 && ^(main_linear_tanhexitii_79) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_79_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %77 = fadd float %40, %76*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_276)) begin
-		main_linear_tanhexitii_77_reg <= main_linear_tanhexitii_77;
-		if (start == 1'b0 && ^(main_linear_tanhexitii_77) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_77_reg"); $finish; end
+	/*   %79 = fadd float %42, %78*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_272)) begin
+		main_linear_tanhexitii_79_reg <= main_linear_tanhexitii_79;
+		if (start == 1'b0 && ^(main_linear_tanhexitii_79) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_79_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %78 = add nsw i32 %t.119.i.i, 1*/
-		main_linear_tanhexitii_78 = (main_preheader15ii_t119ii_reg + 32'd1);
+	/*   %80 = add nsw i32 %t.119.i.i, 1*/
+		main_linear_tanhexitii_80 = (main_preheader15ii_t119ii_reg + 32'd1);
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %78 = add nsw i32 %t.119.i.i, 1*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_226)) begin
-		main_linear_tanhexitii_78_reg <= main_linear_tanhexitii_78;
-		if (start == 1'b0 && ^(main_linear_tanhexitii_78) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_78_reg"); $finish; end
+	/*   %80 = add nsw i32 %t.119.i.i, 1*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_222)) begin
+		main_linear_tanhexitii_80_reg <= main_linear_tanhexitii_80;
+		if (start == 1'b0 && ^(main_linear_tanhexitii_80) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_80_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %exitcond3 = icmp eq i32 %78, 64*/
-		main_linear_tanhexitii_exitcond3 = (main_linear_tanhexitii_78 == 32'd64);
+	/*   %exitcond3 = icmp eq i32 %80, 64*/
+		main_linear_tanhexitii_exitcond3 = (main_linear_tanhexitii_80 == 32'd64);
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %exitcond3 = icmp eq i32 %78, 64*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_226)) begin
+	/*   %exitcond3 = icmp eq i32 %80, 64*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_222)) begin
 		main_linear_tanhexitii_exitcond3_reg <= main_linear_tanhexitii_exitcond3;
 		if (start == 1'b0 && ^(main_linear_tanhexitii_exitcond3) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexitii_exitcond3_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %.preheader*/
-	/*   %79 = phi float [ %121, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_346) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
-		main_preheader_79 = main_linear_sech2exitii_121;
+	/*   %81 = phi float [ %123, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_342) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
+		main_preheader_81 = main_linear_sech2exitii_123;
 	end
 	/* main: %.preheader*/
-	/*   %79 = phi float [ %121, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_422) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_preheader_79 = 32'h0;
+	/*   %81 = phi float [ %123, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_418) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_preheader_81 = 32'h0;
 	end
 end
 always @(posedge clk) begin
 	/* main: %.preheader*/
-	/*   %79 = phi float [ %121, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_346) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
-		main_preheader_79_reg <= main_preheader_79;
-		if (start == 1'b0 && ^(main_preheader_79) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_79_reg"); $finish; end
+	/*   %81 = phi float [ %123, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_342) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
+		main_preheader_81_reg <= main_preheader_81;
+		if (start == 1'b0 && ^(main_preheader_81) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_81_reg"); $finish; end
 	end
 	/* main: %.preheader*/
-	/*   %79 = phi float [ %121, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_422) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader_79_reg <= main_preheader_79;
-		if (start == 1'b0 && ^(main_preheader_79) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_79_reg"); $finish; end
+	/*   %81 = phi float [ %123, %linear_sech2.exit.i.i ], [ 0.000000e+00, %.preheader.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_418) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader_81_reg <= main_preheader_81;
+		if (start == 1'b0 && ^(main_preheader_81) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_81_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %.preheader*/
-	/*   %t.218.i.i = phi i32 [ %122, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_346) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
-		main_preheader_t218ii = main_linear_sech2exitii_122_reg;
+	/*   %t.218.i.i = phi i32 [ %124, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_342) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
+		main_preheader_t218ii = main_linear_sech2exitii_124_reg;
 	end
 	/* main: %.preheader*/
-	/*   %t.218.i.i = phi i32 [ %122, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_422) & (memory_controller_waitrequest == 1'd0))) */ begin
+	/*   %t.218.i.i = phi i32 [ %124, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_418) & (memory_controller_waitrequest == 1'd0))) */ begin
 		main_preheader_t218ii = 32'd0;
 	end
 end
 always @(posedge clk) begin
 	/* main: %.preheader*/
-	/*   %t.218.i.i = phi i32 [ %122, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_346) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
+	/*   %t.218.i.i = phi i32 [ %124, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_sech2exitii_342) & (memory_controller_waitrequest == 1'd0)) & (main_linear_sech2exitii_exitcond9_reg == 1'd0))) begin
 		main_preheader_t218ii_reg <= main_preheader_t218ii;
 		if (start == 1'b0 && ^(main_preheader_t218ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_t218ii_reg"); $finish; end
 	end
 	/* main: %.preheader*/
-	/*   %t.218.i.i = phi i32 [ %122, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_422) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %t.218.i.i = phi i32 [ %124, %linear_sech2.exit.i.i ], [ 0, %.preheader.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheaderpreheader_418) & (memory_controller_waitrequest == 1'd0))) begin
 		main_preheader_t218ii_reg <= main_preheader_t218ii;
 		if (start == 1'b0 && ^(main_preheader_t218ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_t218ii_reg"); $finish; end
 	end
@@ -5471,1002 +5399,981 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %.preheader*/
-	/*   %80 = load float* %scevgep10, align 4, !tbaa !1*/
-		main_preheader_80 = memory_controller_out_b[31:0];
+	/*   %82 = load float* %scevgep10, align 4, !tbaa !1*/
+		main_preheader_82 = memory_controller_out_b[31:0];
 end
 always @(posedge clk) begin
 	/* main: %.preheader*/
-	/*   %80 = load float* %scevgep10, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader_280)) begin
-		main_preheader_80_reg <= main_preheader_80;
-		if (start == 1'b0 && ^(main_preheader_80) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_80_reg"); $finish; end
+	/*   %82 = load float* %scevgep10, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader_276)) begin
+		main_preheader_82_reg <= main_preheader_82;
+		if (start == 1'b0 && ^(main_preheader_82) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader_82_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_preheader_81 = altfp_compare32_1_main_preheader_81_out;
+	main_preheader_83 = altfp_compare32_1_main_preheader_83_out;
 end
 always @(*) begin
-	main_82_83 = altfp_compare32_1_main_82_83_out;
+	main_84_85 = altfp_compare32_1_main_84_85_out;
 end
 always @(*) begin
-	main_82_84 = altfp_compare32_1_main_82_84_out;
+	main_84_86 = altfp_compare32_1_main_84_86_out;
 end
 always @(*) begin
-	/* main: %82*/
-	/*   %or.cond.i1.i.i = and i1 %83, %84*/
-		main_82_orcondi1ii = (main_82_83 & main_82_84);
+	/* main: %84*/
+	/*   %or.cond.i1.i.i = and i1 %85, %86*/
+		main_84_orcondi1ii = (main_84_85 & main_84_86);
 end
 always @(*) begin
-	main_85_86 = altfp_compare32_1_main_85_86_out;
+	main_87_88 = altfp_compare32_1_main_87_88_out;
 end
 always @(*) begin
-	main_85_87 = altfp_compare32_1_main_85_87_out;
+	main_87_89 = altfp_compare32_1_main_87_89_out;
 end
 always @(*) begin
-	/* main: %85*/
-	/*   %or.cond12.i2.i.i = and i1 %86, %87*/
-		main_85_orcond12i2ii = (main_85_86 & main_85_87);
+	/* main: %87*/
+	/*   %or.cond12.i2.i.i = and i1 %88, %89*/
+		main_87_orcond12i2ii = (main_87_88 & main_87_89);
 end
 always @(*) begin
-	main_88_89 = main_altfp_extend_32_0;
+	main_90_91 = main_altfp_extend_32_0;
+end
+always @(*) begin
+/* main: %90*/
+/*   %91 = fpext float %82 to double*/
+	main_90_91_reg = main_convergedexiti_33_reg;
+end
+always @(*) begin
+	main_90_92 = altfp_compare32_1_main_90_92_out;
+end
+always @(*) begin
+	main_90_93 = altfp_compare32_1_main_90_93_out;
+end
+always @(*) begin
+	/* main: %90*/
+	/*   %or.cond3.i3.i.i = and i1 %92, %93*/
+		main_90_orcond3i3ii = (main_90_92 & main_90_93);
 end
 always @(posedge clk) begin
-	/* main: %88*/
-	/*   %89 = fpext float %80 to double*/
-	if ((cur_state == LEGUP_F_main_BB__88_288)) begin
-		main_88_89_reg <= main_88_89;
-		if (start == 1'b0 && ^(main_88_89) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_88_89_reg"); $finish; end
-	end
-	/* main: %88*/
-	/*   %89 = fpext float %80 to double*/
-	if ((cur_state == LEGUP_F_main_BB__88_288)) begin
-		main_88_89_reg <= main_88_89;
-		if (start == 1'b0 && ^(main_88_89) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_88_89_reg"); $finish; end
-	end
-	/* main: %converged.exit.i*/
-	/*   %28 = fpext float %27 to double*/
-	if ((cur_state == LEGUP_F_main_BB_convergedexiti_154)) begin
-		main_88_89_reg <= main_convergedexiti_28;
-		if (start == 1'b0 && ^(main_convergedexiti_28) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_88_89_reg"); $finish; end
+	/* main: %90*/
+	/*   %or.cond3.i3.i.i = and i1 %92, %93*/
+	if ((cur_state == LEGUP_F_main_BB__90_283)) begin
+		main_90_orcond3i3ii_reg <= main_90_orcond3i3ii;
+		if (start == 1'b0 && ^(main_90_orcond3i3ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_90_orcond3i3ii_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_88_90 = altfp_compare32_1_main_88_90_out;
+	main_94_95 = altfp_compare32_1_main_94_95_out;
 end
 always @(*) begin
-	main_88_91 = altfp_compare32_1_main_88_91_out;
+	main_94_96 = altfp_compare32_1_main_94_96_out;
 end
 always @(*) begin
-	/* main: %88*/
-	/*   %or.cond3.i3.i.i = and i1 %90, %91*/
-		main_88_orcond3i3ii = (main_88_90 & main_88_91);
-end
-always @(posedge clk) begin
-	/* main: %88*/
-	/*   %or.cond3.i3.i.i = and i1 %90, %91*/
-	if ((cur_state == LEGUP_F_main_BB__88_287)) begin
-		main_88_orcond3i3ii_reg <= main_88_orcond3i3ii;
-		if (start == 1'b0 && ^(main_88_orcond3i3ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_88_orcond3i3ii_reg"); $finish; end
-	end
+	/* main: %94*/
+	/*   %or.cond13.i4.i.i = and i1 %95, %96*/
+		main_94_orcond13i4ii = (main_94_95 & main_94_96);
 end
 always @(*) begin
-	main_92_93 = altfp_compare32_1_main_92_93_out;
+	main_97_98 = altfp_compare32_1_main_97_98_out;
 end
 always @(*) begin
-	main_92_94 = altfp_compare32_1_main_92_94_out;
+	main_97_99 = altfp_compare64_1_main_97_99_out;
 end
 always @(*) begin
-	/* main: %92*/
-	/*   %or.cond13.i4.i.i = and i1 %93, %94*/
-		main_92_orcond13i4ii = (main_92_93 & main_92_94);
+	/* main: %97*/
+	/*   %or.cond14.i5.i.i = and i1 %98, %99*/
+		main_97_orcond14i5ii = (main_97_98 & main_97_99);
 end
 always @(*) begin
-	main_95_96 = altfp_compare32_1_main_95_96_out;
+	main_100_101 = altfp_compare64_1_main_100_101_out;
 end
 always @(*) begin
-	main_95_97 = altfp_compare64_1_main_95_97_out;
+	main_100_102 = altfp_compare32_1_main_100_102_out;
 end
 always @(*) begin
-	/* main: %95*/
-	/*   %or.cond14.i5.i.i = and i1 %96, %97*/
-		main_95_orcond14i5ii = (main_95_96 & main_95_97);
+	/* main: %100*/
+	/*   %or.cond5.i6.i.i = and i1 %101, %102*/
+		main_100_orcond5i6ii = (main_100_101 & main_100_102);
 end
 always @(*) begin
-	main_98_99 = altfp_compare64_1_main_98_99_out;
+	main_103_104 = altfp_compare32_1_main_103_104_out;
 end
 always @(*) begin
-	main_98_100 = altfp_compare32_1_main_98_100_out;
+	main_103_105 = altfp_compare64_1_main_103_105_out;
 end
 always @(*) begin
-	/* main: %98*/
-	/*   %or.cond5.i6.i.i = and i1 %99, %100*/
-		main_98_orcond5i6ii = (main_98_99 & main_98_100);
+	/* main: %103*/
+	/*   %or.cond15.i7.i.i = and i1 %104, %105*/
+		main_103_orcond15i7ii = (main_103_104 & main_103_105);
 end
 always @(*) begin
-	main_101_102 = altfp_compare32_1_main_101_102_out;
+	main_106_107 = altfp_compare64_1_main_106_107_out;
 end
 always @(*) begin
-	main_101_103 = altfp_compare64_1_main_101_103_out;
+	main_106_108 = altfp_compare32_1_main_106_108_out;
 end
 always @(*) begin
-	/* main: %101*/
-	/*   %or.cond15.i7.i.i = and i1 %102, %103*/
-		main_101_orcond15i7ii = (main_101_102 & main_101_103);
+	/* main: %106*/
+	/*   %or.cond16.i.i.i = and i1 %107, %108*/
+		main_106_orcond16iii = (main_106_107 & main_106_108);
 end
 always @(*) begin
-	main_104_105 = altfp_compare64_1_main_104_105_out;
+	main_109_110 = altfp_compare32_1_main_109_110_out;
 end
 always @(*) begin
-	main_104_106 = altfp_compare32_1_main_104_106_out;
+	main_109_111 = altfp_compare32_1_main_109_111_out;
 end
 always @(*) begin
-	/* main: %104*/
-	/*   %or.cond16.i.i.i = and i1 %105, %106*/
-		main_104_orcond16iii = (main_104_105 & main_104_106);
+	/* main: %109*/
+	/*   %or.cond7.i8.i.i = and i1 %110, %111*/
+		main_109_orcond7i8ii = (main_109_110 & main_109_111);
 end
 always @(*) begin
-	main_107_108 = altfp_compare32_1_main_107_108_out;
+	main_112_113 = altfp_compare32_1_main_112_113_out;
 end
 always @(*) begin
-	main_107_109 = altfp_compare32_1_main_107_109_out;
+	main_112_114 = altfp_compare32_1_main_112_114_out;
 end
 always @(*) begin
-	/* main: %107*/
-	/*   %or.cond7.i8.i.i = and i1 %108, %109*/
-		main_107_orcond7i8ii = (main_107_108 & main_107_109);
+	/* main: %112*/
+	/*   %or.cond17.i.i.i = and i1 %113, %114*/
+		main_112_orcond17iii = (main_112_113 & main_112_114);
 end
 always @(*) begin
-	main_110_111 = altfp_compare32_1_main_110_111_out;
+	main_115_116 = altfp_compare32_1_main_115_116_out;
 end
 always @(*) begin
-	main_110_112 = altfp_compare32_1_main_110_112_out;
+	main_115_117 = altfp_compare32_1_main_115_117_out;
 end
 always @(*) begin
-	/* main: %110*/
-	/*   %or.cond17.i.i.i = and i1 %111, %112*/
-		main_110_orcond17iii = (main_110_111 & main_110_112);
+	/* main: %115*/
+	/*   %or.cond9.i9.i.i = and i1 %116, %117*/
+		main_115_orcond9i9ii = (main_115_116 & main_115_117);
 end
 always @(*) begin
-	main_113_114 = altfp_compare32_1_main_113_114_out;
+	main_118_119 = altfp_compare32_1_main_118_119_out;
 end
 always @(*) begin
-	main_113_115 = altfp_compare32_1_main_113_115_out;
+	main_118_120 = altfp_compare32_1_main_118_120_out;
 end
 always @(*) begin
-	/* main: %113*/
-	/*   %or.cond9.i9.i.i = and i1 %114, %115*/
-		main_113_orcond9i9ii = (main_113_114 & main_113_115);
+	/* main: %118*/
+	/*   %or.cond11.i10.i.i = and i1 %119, %120*/
+		main_118_orcond11i10ii = (main_118_119 & main_118_120);
 end
 always @(*) begin
-	main_116_117 = altfp_compare32_1_main_116_117_out;
-end
-always @(*) begin
-	main_116_118 = altfp_compare32_1_main_116_118_out;
-end
-always @(*) begin
-	/* main: %116*/
-	/*   %or.cond11.i10.i.i = and i1 %117, %118*/
-		main_116_orcond11i10ii = (main_116_117 & main_116_118);
-end
-always @(*) begin
-	/* main: %116*/
+	/* main: %118*/
 	/*   %..i11.i.i = select i1 %or.cond11.i10.i.i, float 0xBFACE29860000000, float 0xBF6FB389A0000000*/
-		main_116_i11ii = (main_116_orcond11i10ii ? 32'hBD6714C3 : 32'hBB7D9C4D);
+		main_118_i11ii = (main_118_orcond11i10ii ? 32'hBD6714C3 : 32'hBB7D9C4D);
 end
 always @(*) begin
-	/* main: %116*/
+	/* main: %118*/
 	/*   %.18.i.i.i = select i1 %or.cond11.i10.i.i, float 0x3FC6075F60000000, float 0x3F925460A0000000*/
-		main_116_18iii = (main_116_orcond11i10ii ? 32'h3E303AFB : 32'h3C92A305);
+		main_118_18iii = (main_118_orcond11i10ii ? 32'h3E303AFB : 32'h3C92A305);
 end
 always @(*) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader_281) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_81 == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader_277) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_83 == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3B7D9C4D;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__82_283) & (memory_controller_waitrequest == 1'd0)) & (main_82_orcondi1ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__84_279) & (memory_controller_waitrequest == 1'd0)) & (main_84_orcondi1ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3D6714C3;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__85_285) & (memory_controller_waitrequest == 1'd0)) & (main_85_orcond12i2ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__87_281) & (memory_controller_waitrequest == 1'd0)) & (main_87_orcond12i2ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3E5B4A20;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__88_288) & (memory_controller_waitrequest == 1'd0)) & (main_88_orcond3i3ii_reg == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__90_284) & (memory_controller_waitrequest == 1'd0)) & (main_90_orcond3i3ii_reg == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3EF14222;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__92_290) & (memory_controller_waitrequest == 1'd0)) & (main_92_orcond13i4ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__94_286) & (memory_controller_waitrequest == 1'd0)) & (main_94_orcond13i4ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3F3D7B52;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__95_292) & (memory_controller_waitrequest == 1'd0)) & (main_95_orcond14i5ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__97_288) & (memory_controller_waitrequest == 1'd0)) & (main_97_orcond14i5ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3F1942CF;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__98_294) & (memory_controller_waitrequest == 1'd0)) & (main_98_orcond5i6ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__100_290) & (memory_controller_waitrequest == 1'd0)) & (main_100_orcond5i6ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'h3E5BC8F4;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__101_296) & (memory_controller_waitrequest == 1'd0)) & (main_101_orcond15i7ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__103_292) & (memory_controller_waitrequest == 1'd0)) & (main_103_orcond15i7ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'hBE5BC8F4;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__104_298) & (memory_controller_waitrequest == 1'd0)) & (main_104_orcond16iii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__106_294) & (memory_controller_waitrequest == 1'd0)) & (main_106_orcond16iii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'hBF1942CF;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__107_300) & (memory_controller_waitrequest == 1'd0)) & (main_107_orcond7i8ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__109_296) & (memory_controller_waitrequest == 1'd0)) & (main_109_orcond7i8ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'hBF3D7B52;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__110_302) & (memory_controller_waitrequest == 1'd0)) & (main_110_orcond17iii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__112_298) & (memory_controller_waitrequest == 1'd0)) & (main_112_orcond17iii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'hBEF14222;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__113_304) & (memory_controller_waitrequest == 1'd0)) & (main_113_orcond9i9ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__115_300) & (memory_controller_waitrequest == 1'd0)) & (main_115_orcond9i9ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii = 32'hBE5B4A20;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__116_306) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_linear_sech2exitii_a0i12ii = main_116_i11ii;
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__118_302) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_linear_sech2exitii_a0i12ii = main_118_i11ii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader_281) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_81 == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader_277) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_83 == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__82_283) & (memory_controller_waitrequest == 1'd0)) & (main_82_orcondi1ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__84_279) & (memory_controller_waitrequest == 1'd0)) & (main_84_orcondi1ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__85_285) & (memory_controller_waitrequest == 1'd0)) & (main_85_orcond12i2ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__87_281) & (memory_controller_waitrequest == 1'd0)) & (main_87_orcond12i2ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__88_288) & (memory_controller_waitrequest == 1'd0)) & (main_88_orcond3i3ii_reg == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__90_284) & (memory_controller_waitrequest == 1'd0)) & (main_90_orcond3i3ii_reg == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__92_290) & (memory_controller_waitrequest == 1'd0)) & (main_92_orcond13i4ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__94_286) & (memory_controller_waitrequest == 1'd0)) & (main_94_orcond13i4ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__95_292) & (memory_controller_waitrequest == 1'd0)) & (main_95_orcond14i5ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__97_288) & (memory_controller_waitrequest == 1'd0)) & (main_97_orcond14i5ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__98_294) & (memory_controller_waitrequest == 1'd0)) & (main_98_orcond5i6ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__100_290) & (memory_controller_waitrequest == 1'd0)) & (main_100_orcond5i6ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__101_296) & (memory_controller_waitrequest == 1'd0)) & (main_101_orcond15i7ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__103_292) & (memory_controller_waitrequest == 1'd0)) & (main_103_orcond15i7ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__104_298) & (memory_controller_waitrequest == 1'd0)) & (main_104_orcond16iii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__106_294) & (memory_controller_waitrequest == 1'd0)) & (main_106_orcond16iii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__107_300) & (memory_controller_waitrequest == 1'd0)) & (main_107_orcond7i8ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__109_296) & (memory_controller_waitrequest == 1'd0)) & (main_109_orcond7i8ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__110_302) & (memory_controller_waitrequest == 1'd0)) & (main_110_orcond17iii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__112_298) & (memory_controller_waitrequest == 1'd0)) & (main_112_orcond17iii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__113_304) & (memory_controller_waitrequest == 1'd0)) & (main_113_orcond9i9ii == 1'd1))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__115_300) & (memory_controller_waitrequest == 1'd0)) & (main_115_orcond9i9ii == 1'd1))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %82 ], [ 0x3FCB694400000000, %85 ], [ 0x3FDE284440000000, %88 ], [ 0x3FE7AF6A40000000, %92 ], [ 0x3FE32859E0000000, %95 ], [ 0x3FCB791E80000000, %98 ], [ 0xBFCB791E80000000, %101 ], [ 0xBFE32859E0000000, %104 ], [ 0xBFE7AF6A40000000, %107 ], [ 0xBFDE284440000000, %110 ], [ 0xBFCB694400000000, %113 ], [ %..i11.i.i, %116 ]*/
-	if (((cur_state == LEGUP_F_main_BB__116_306) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %a.0.i12.i.i = phi float [ 0x3F6FB389A0000000, %.preheader ], [ 0x3FACE29860000000, %84 ], [ 0x3FCB694400000000, %87 ], [ 0x3FDE284440000000, %90 ], [ 0x3FE7AF6A40000000, %94 ], [ 0x3FE32859E0000000, %97 ], [ 0x3FCB791E80000000, %100 ], [ 0xBFCB791E80000000, %103 ], [ 0xBFE32859E0000000, %106 ], [ 0xBFE7AF6A40000000, %109 ], [ 0xBFDE284440000000, %112 ], [ 0xBFCB694400000000, %115 ], [ %..i11.i.i, %118 ]*/
+	if (((cur_state == LEGUP_F_main_BB__118_302) & (memory_controller_waitrequest == 1'd0))) begin
 		main_linear_sech2exitii_a0i12ii_reg <= main_linear_sech2exitii_a0i12ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_a0i12ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_a0i12ii_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader_281) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_81 == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader_277) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_83 == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3C92A305;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__82_283) & (memory_controller_waitrequest == 1'd0)) & (main_82_orcondi1ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__84_279) & (memory_controller_waitrequest == 1'd0)) & (main_84_orcondi1ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3E303AFB;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__85_285) & (memory_controller_waitrequest == 1'd0)) & (main_85_orcond12i2ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__87_281) & (memory_controller_waitrequest == 1'd0)) & (main_87_orcond12i2ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3EFC3611;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__88_288) & (memory_controller_waitrequest == 1'd0)) & (main_88_orcond3i3ii_reg == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__90_284) & (memory_controller_waitrequest == 1'd0)) & (main_90_orcond3i3ii_reg == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F605532;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__92_290) & (memory_controller_waitrequest == 1'd0)) & (main_92_orcond13i4ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__94_286) & (memory_controller_waitrequest == 1'd0)) & (main_94_orcond13i4ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F93BCD3;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__95_292) & (memory_controller_waitrequest == 1'd0)) & (main_95_orcond14i5ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__97_288) & (memory_controller_waitrequest == 1'd0)) & (main_97_orcond14i5ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F8BC01A;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__98_294) & (memory_controller_waitrequest == 1'd0)) & (main_98_orcond5i6ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__100_290) & (memory_controller_waitrequest == 1'd0)) & (main_100_orcond5i6ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F81096C;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__101_296) & (memory_controller_waitrequest == 1'd0)) & (main_101_orcond15i7ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__103_292) & (memory_controller_waitrequest == 1'd0)) & (main_103_orcond15i7ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F81096C;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__104_298) & (memory_controller_waitrequest == 1'd0)) & (main_104_orcond16iii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__106_294) & (memory_controller_waitrequest == 1'd0)) & (main_106_orcond16iii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F8BC01A;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__107_300) & (memory_controller_waitrequest == 1'd0)) & (main_107_orcond7i8ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__109_296) & (memory_controller_waitrequest == 1'd0)) & (main_109_orcond7i8ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F93BCD3;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__110_302) & (memory_controller_waitrequest == 1'd0)) & (main_110_orcond17iii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__112_298) & (memory_controller_waitrequest == 1'd0)) & (main_112_orcond17iii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3F605532;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__113_304) & (memory_controller_waitrequest == 1'd0)) & (main_113_orcond9i9ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__115_300) & (memory_controller_waitrequest == 1'd0)) & (main_115_orcond9i9ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii = 32'h3EFC3611;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__116_306) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_linear_sech2exitii_b0i13ii = main_116_18iii;
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__118_302) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_linear_sech2exitii_b0i13ii = main_118_18iii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader_281) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_81 == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader_277) & (memory_controller_waitrequest == 1'd0)) & (main_preheader_83 == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__82_283) & (memory_controller_waitrequest == 1'd0)) & (main_82_orcondi1ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__84_279) & (memory_controller_waitrequest == 1'd0)) & (main_84_orcondi1ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__85_285) & (memory_controller_waitrequest == 1'd0)) & (main_85_orcond12i2ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__87_281) & (memory_controller_waitrequest == 1'd0)) & (main_87_orcond12i2ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__88_288) & (memory_controller_waitrequest == 1'd0)) & (main_88_orcond3i3ii_reg == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__90_284) & (memory_controller_waitrequest == 1'd0)) & (main_90_orcond3i3ii_reg == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__92_290) & (memory_controller_waitrequest == 1'd0)) & (main_92_orcond13i4ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__94_286) & (memory_controller_waitrequest == 1'd0)) & (main_94_orcond13i4ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__95_292) & (memory_controller_waitrequest == 1'd0)) & (main_95_orcond14i5ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__97_288) & (memory_controller_waitrequest == 1'd0)) & (main_97_orcond14i5ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__98_294) & (memory_controller_waitrequest == 1'd0)) & (main_98_orcond5i6ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__100_290) & (memory_controller_waitrequest == 1'd0)) & (main_100_orcond5i6ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__101_296) & (memory_controller_waitrequest == 1'd0)) & (main_101_orcond15i7ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__103_292) & (memory_controller_waitrequest == 1'd0)) & (main_103_orcond15i7ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__104_298) & (memory_controller_waitrequest == 1'd0)) & (main_104_orcond16iii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__106_294) & (memory_controller_waitrequest == 1'd0)) & (main_106_orcond16iii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__107_300) & (memory_controller_waitrequest == 1'd0)) & (main_107_orcond7i8ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__109_296) & (memory_controller_waitrequest == 1'd0)) & (main_109_orcond7i8ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__110_302) & (memory_controller_waitrequest == 1'd0)) & (main_110_orcond17iii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__112_298) & (memory_controller_waitrequest == 1'd0)) & (main_112_orcond17iii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__113_304) & (memory_controller_waitrequest == 1'd0)) & (main_113_orcond9i9ii == 1'd1))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__115_300) & (memory_controller_waitrequest == 1'd0)) & (main_115_orcond9i9ii == 1'd1))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %82 ], [ 0x3FDF86C220000000, %85 ], [ 0x3FEC0AA640000000, %88 ], [ 0x3FF2779A60000000, %92 ], [ 0x3FF1780340000000, %95 ], [ 0x3FF0212D80000000, %98 ], [ 0x3FF0212D80000000, %101 ], [ 0x3FF1780340000000, %104 ], [ 0x3FF2779A60000000, %107 ], [ 0x3FEC0AA640000000, %110 ], [ 0x3FDF86C220000000, %113 ], [ %.18.i.i.i, %116 ]*/
-	if (((cur_state == LEGUP_F_main_BB__116_306) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %b.0.i13.i.i = phi float [ 0x3F925460A0000000, %.preheader ], [ 0x3FC6075F60000000, %84 ], [ 0x3FDF86C220000000, %87 ], [ 0x3FEC0AA640000000, %90 ], [ 0x3FF2779A60000000, %94 ], [ 0x3FF1780340000000, %97 ], [ 0x3FF0212D80000000, %100 ], [ 0x3FF0212D80000000, %103 ], [ 0x3FF1780340000000, %106 ], [ 0x3FF2779A60000000, %109 ], [ 0x3FEC0AA640000000, %112 ], [ 0x3FDF86C220000000, %115 ], [ %.18.i.i.i, %118 ]*/
+	if (((cur_state == LEGUP_F_main_BB__118_302) & (memory_controller_waitrequest == 1'd0))) begin
 		main_linear_sech2exitii_b0i13ii_reg <= main_linear_sech2exitii_b0i13ii;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_b0i13ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_b0i13ii_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_linear_sech2exitii_119 = main_altfp_multiply_32_0;
+	main_linear_sech2exitii_121 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-	main_linear_sech2exitii_120 = main_altfp_add_32_0;
+	main_linear_sech2exitii_122 = main_altfp_add_32_0;
 end
 always @(*) begin
-	main_linear_sech2exitii_121 = main_altfp_add_32_0;
+	main_linear_sech2exitii_123 = main_altfp_add_32_0;
 end
 always @(posedge clk) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %121 = fadd float %79, %120*/
-	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_346)) begin
-		main_linear_sech2exitii_121_reg <= main_linear_sech2exitii_121;
-		if (start == 1'b0 && ^(main_linear_sech2exitii_121) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_121_reg"); $finish; end
+	/*   %123 = fadd float %81, %122*/
+	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_342)) begin
+		main_linear_sech2exitii_123_reg <= main_linear_sech2exitii_123;
+		if (start == 1'b0 && ^(main_linear_sech2exitii_123) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_123_reg"); $finish; end
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %121 = fadd float %79, %120*/
-	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_346)) begin
-		main_linear_sech2exitii_121_reg <= main_linear_sech2exitii_121;
-		if (start == 1'b0 && ^(main_linear_sech2exitii_121) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_121_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %linear_sech2.exit.i.i*/
-	/*   %122 = add nsw i32 %t.218.i.i, 1*/
-		main_linear_sech2exitii_122 = (main_preheader_t218ii_reg + 32'd1);
-end
-always @(posedge clk) begin
-	/* main: %linear_sech2.exit.i.i*/
-	/*   %122 = add nsw i32 %t.218.i.i, 1*/
-	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_307)) begin
-		main_linear_sech2exitii_122_reg <= main_linear_sech2exitii_122;
-		if (start == 1'b0 && ^(main_linear_sech2exitii_122) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_122_reg"); $finish; end
+	/*   %123 = fadd float %81, %122*/
+	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_342)) begin
+		main_linear_sech2exitii_123_reg <= main_linear_sech2exitii_123;
+		if (start == 1'b0 && ^(main_linear_sech2exitii_123) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_123_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %exitcond9 = icmp eq i32 %122, 64*/
-		main_linear_sech2exitii_exitcond9 = (main_linear_sech2exitii_122 == 32'd64);
+	/*   %124 = add nsw i32 %t.218.i.i, 1*/
+		main_linear_sech2exitii_124 = (main_preheader_t218ii_reg + 32'd1);
 end
 always @(posedge clk) begin
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %exitcond9 = icmp eq i32 %122, 64*/
-	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_307)) begin
+	/*   %124 = add nsw i32 %t.218.i.i, 1*/
+	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_303)) begin
+		main_linear_sech2exitii_124_reg <= main_linear_sech2exitii_124;
+		if (start == 1'b0 && ^(main_linear_sech2exitii_124) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_124_reg"); $finish; end
+	end
+end
+always @(*) begin
+	/* main: %linear_sech2.exit.i.i*/
+	/*   %exitcond9 = icmp eq i32 %124, 64*/
+		main_linear_sech2exitii_exitcond9 = (main_linear_sech2exitii_124 == 32'd64);
+end
+always @(posedge clk) begin
+	/* main: %linear_sech2.exit.i.i*/
+	/*   %exitcond9 = icmp eq i32 %124, 64*/
+	if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_303)) begin
 		main_linear_sech2exitii_exitcond9_reg <= main_linear_sech2exitii_exitcond9;
 		if (start == 1'b0 && ^(main_linear_sech2exitii_exitcond9) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_sech2exitii_exitcond9_reg"); $finish; end
 	end
 end
 always @(*) begin
-	/* main: %.preheader5*/
-	/*   %123 = phi float [ %160, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader5.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader5preheader_277) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader5_123 = 32'h0;
+	/* main: %.preheader1*/
+	/*   %125 = phi float [ %162, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader1.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader1preheader_273) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader1_125 = 32'h0;
 	end
-	/* main: %.preheader5*/
-	/*   %123 = phi float [ %160, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader5.preheader ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_421) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) */ begin
-		main_preheader5_123 = main_linear_tanhexit1ii_160;
-	end
-end
-always @(posedge clk) begin
-	/* main: %.preheader5*/
-	/*   %123 = phi float [ %160, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader5.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader5preheader_277) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader5_123_reg <= main_preheader5_123;
-		if (start == 1'b0 && ^(main_preheader5_123) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader5_123_reg"); $finish; end
-	end
-	/* main: %.preheader5*/
-	/*   %123 = phi float [ %160, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader5.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_421) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) begin
-		main_preheader5_123_reg <= main_preheader5_123;
-		if (start == 1'b0 && ^(main_preheader5_123) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader5_123_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %.preheader5*/
-	/*   %t.119.1.i.i = phi i32 [ %161, %linear_tanh.exit.1.i.i ], [ 0, %.preheader5.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader5preheader_277) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader5_t1191ii = 32'd0;
-	end
-	/* main: %.preheader5*/
-	/*   %t.119.1.i.i = phi i32 [ %161, %linear_tanh.exit.1.i.i ], [ 0, %.preheader5.preheader ]*/
-	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_421) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) */ begin
-		main_preheader5_t1191ii = main_linear_tanhexit1ii_161_reg;
+	/* main: %.preheader1*/
+	/*   %125 = phi float [ %162, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader1.preheader ]*/
+	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_417) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) */ begin
+		main_preheader1_125 = main_linear_tanhexit1ii_162;
 	end
 end
 always @(posedge clk) begin
-	/* main: %.preheader5*/
-	/*   %t.119.1.i.i = phi i32 [ %161, %linear_tanh.exit.1.i.i ], [ 0, %.preheader5.preheader ]*/
-	if (((cur_state == LEGUP_F_main_BB_preheader5preheader_277) & (memory_controller_waitrequest == 1'd0))) begin
-		main_preheader5_t1191ii_reg <= main_preheader5_t1191ii;
-		if (start == 1'b0 && ^(main_preheader5_t1191ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader5_t1191ii_reg"); $finish; end
+	/* main: %.preheader1*/
+	/*   %125 = phi float [ %162, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader1.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader1preheader_273) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader1_125_reg <= main_preheader1_125;
+		if (start == 1'b0 && ^(main_preheader1_125) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader1_125_reg"); $finish; end
 	end
-	/* main: %.preheader5*/
-	/*   %t.119.1.i.i = phi i32 [ %161, %linear_tanh.exit.1.i.i ], [ 0, %.preheader5.preheader ]*/
-	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_421) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) begin
-		main_preheader5_t1191ii_reg <= main_preheader5_t1191ii;
-		if (start == 1'b0 && ^(main_preheader5_t1191ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader5_t1191ii_reg"); $finish; end
+	/* main: %.preheader1*/
+	/*   %125 = phi float [ %162, %linear_tanh.exit.1.i.i ], [ 0.000000e+00, %.preheader1.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_417) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) begin
+		main_preheader1_125_reg <= main_preheader1_125;
+		if (start == 1'b0 && ^(main_preheader1_125) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader1_125_reg"); $finish; end
 	end
 end
 always @(*) begin
-	/* main: %.preheader5*/
+	/* main: %.preheader1*/
+	/*   %t.119.1.i.i = phi i32 [ %163, %linear_tanh.exit.1.i.i ], [ 0, %.preheader1.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader1preheader_273) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader1_t1191ii = 32'd0;
+	end
+	/* main: %.preheader1*/
+	/*   %t.119.1.i.i = phi i32 [ %163, %linear_tanh.exit.1.i.i ], [ 0, %.preheader1.preheader ]*/
+	else /* if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_417) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) */ begin
+		main_preheader1_t1191ii = main_linear_tanhexit1ii_163_reg;
+	end
+end
+always @(posedge clk) begin
+	/* main: %.preheader1*/
+	/*   %t.119.1.i.i = phi i32 [ %163, %linear_tanh.exit.1.i.i ], [ 0, %.preheader1.preheader ]*/
+	if (((cur_state == LEGUP_F_main_BB_preheader1preheader_273) & (memory_controller_waitrequest == 1'd0))) begin
+		main_preheader1_t1191ii_reg <= main_preheader1_t1191ii;
+		if (start == 1'b0 && ^(main_preheader1_t1191ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader1_t1191ii_reg"); $finish; end
+	end
+	/* main: %.preheader1*/
+	/*   %t.119.1.i.i = phi i32 [ %163, %linear_tanh.exit.1.i.i ], [ 0, %.preheader1.preheader ]*/
+	if ((((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_417) & (memory_controller_waitrequest == 1'd0)) & (main_linear_tanhexit1ii_exitcond6_reg == 1'd0))) begin
+		main_preheader1_t1191ii_reg <= main_preheader1_t1191ii;
+		if (start == 1'b0 && ^(main_preheader1_t1191ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader1_t1191ii_reg"); $finish; end
+	end
+end
+always @(*) begin
+	/* main: %.preheader1*/
 	/*   %scevgep7 = getelementptr [64 x float]* @product_1, i32 0, i32 %t.119.1.i.i*/
-		main_preheader5_scevgep7 = (`TAG_g_product_1_a + (4 * main_preheader5_t1191ii_reg));
+		main_preheader1_scevgep7 = (`TAG_g_product_1_a + (4 * main_preheader1_t1191ii_reg));
 end
 always @(*) begin
-	/* main: %.preheader5*/
+	/* main: %.preheader1*/
 	/*   %scevgep8 = getelementptr [2 x [64 x float]]* @whitened_signals, i32 0, i32 1, i32 %t.119.1.i.i*/
-		main_preheader5_scevgep8 = (`TAG_g_whitened_signals_a + ((256 * 32'd1) + (4 * main_preheader5_t1191ii_reg)));
+		main_preheader1_scevgep8 = (`TAG_g_whitened_signals_a + ((256 * 32'd1) + (4 * main_preheader1_t1191ii_reg)));
 end
 always @(*) begin
-	/* main: %.preheader5*/
-	/*   %124 = load float* %scevgep8, align 4, !tbaa !1*/
-		main_preheader5_124 = memory_controller_out_a[31:0];
+	/* main: %.preheader1*/
+	/*   %126 = load float* %scevgep8, align 4, !tbaa !1*/
+		main_preheader1_126 = memory_controller_out_a[31:0];
 end
 always @(posedge clk) begin
-	/* main: %.preheader5*/
-	/*   %124 = load float* %scevgep8, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_349)) begin
-		main_preheader5_124_reg <= main_preheader5_124;
-		if (start == 1'b0 && ^(main_preheader5_124) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader5_124_reg"); $finish; end
+	/* main: %.preheader1*/
+	/*   %126 = load float* %scevgep8, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_345)) begin
+		main_preheader1_126_reg <= main_preheader1_126;
+		if (start == 1'b0 && ^(main_preheader1_126) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader1_126_reg"); $finish; end
 	end
 end
 always @(*) begin
-	/* main: %.preheader5*/
-	/*   %125 = load float* %scevgep7, align 4, !tbaa !1*/
-		main_preheader5_125 = memory_controller_out_b[31:0];
+	/* main: %.preheader1*/
+	/*   %127 = load float* %scevgep7, align 4, !tbaa !1*/
+		main_preheader1_127 = memory_controller_out_b[31:0];
 end
 always @(posedge clk) begin
-	/* main: %.preheader5*/
-	/*   %125 = load float* %scevgep7, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_349)) begin
-		main_preheader5_125_reg <= main_preheader5_125;
-		if (start == 1'b0 && ^(main_preheader5_125) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader5_125_reg"); $finish; end
+	/* main: %.preheader1*/
+	/*   %127 = load float* %scevgep7, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_345)) begin
+		main_preheader1_127_reg <= main_preheader1_127;
+		if (start == 1'b0 && ^(main_preheader1_127) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_preheader1_127_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_preheader5_126 = altfp_compare32_1_main_preheader5_126_out;
+	main_preheader1_128 = altfp_compare32_1_main_preheader1_128_out;
 end
 always @(*) begin
-	main_127_128 = altfp_compare32_1_main_127_128_out;
+	main_129_130 = altfp_compare32_1_main_129_130_out;
 end
 always @(*) begin
-	main_127_129 = altfp_compare32_1_main_127_129_out;
+	main_129_131 = altfp_compare32_1_main_129_131_out;
 end
 always @(*) begin
-	/* main: %127*/
-	/*   %or.cond.i.1.i.i = and i1 %128, %129*/
-		main_127_orcondi1ii = (main_127_128 & main_127_129);
+	/* main: %129*/
+	/*   %or.cond.i.1.i.i = and i1 %130, %131*/
+		main_129_orcondi1ii = (main_129_130 & main_129_131);
 end
 always @(*) begin
-	main_130_131 = altfp_compare32_1_main_130_131_out;
+	main_132_133 = altfp_compare32_1_main_132_133_out;
 end
 always @(*) begin
-	main_130_132 = altfp_compare32_1_main_130_132_out;
+	main_132_134 = altfp_compare32_1_main_132_134_out;
 end
 always @(*) begin
-	/* main: %130*/
-	/*   %or.cond12.i.1.i.i = and i1 %131, %132*/
-		main_130_orcond12i1ii = (main_130_131 & main_130_132);
+	/* main: %132*/
+	/*   %or.cond12.i.1.i.i = and i1 %133, %134*/
+		main_132_orcond12i1ii = (main_132_133 & main_132_134);
 end
 always @(*) begin
-	main_133_134 = altfp_compare32_1_main_133_134_out;
+	main_135_136 = altfp_compare32_1_main_135_136_out;
 end
 always @(*) begin
-	main_133_135 = altfp_compare32_1_main_133_135_out;
+	main_135_137 = altfp_compare32_1_main_135_137_out;
 end
 always @(*) begin
-	/* main: %133*/
-	/*   %or.cond3.i.1.i.i = and i1 %134, %135*/
-		main_133_orcond3i1ii = (main_133_134 & main_133_135);
+	/* main: %135*/
+	/*   %or.cond3.i.1.i.i = and i1 %136, %137*/
+		main_135_orcond3i1ii = (main_135_136 & main_135_137);
 end
 always @(*) begin
-	main_136_137 = altfp_compare32_1_main_136_137_out;
+	main_138_139 = altfp_compare32_1_main_138_139_out;
 end
 always @(*) begin
-	main_136_138 = altfp_compare32_1_main_136_138_out;
+	main_138_140 = altfp_compare32_1_main_138_140_out;
 end
 always @(*) begin
-	/* main: %136*/
-	/*   %or.cond13.i.1.i.i = and i1 %137, %138*/
-		main_136_orcond13i1ii = (main_136_137 & main_136_138);
+	/* main: %138*/
+	/*   %or.cond13.i.1.i.i = and i1 %139, %140*/
+		main_138_orcond13i1ii = (main_138_139 & main_138_140);
 end
 always @(*) begin
-	main_139_140 = altfp_compare32_1_main_139_140_out;
+	main_141_142 = altfp_compare32_1_main_141_142_out;
 end
 always @(*) begin
-	main_139_141 = altfp_compare32_1_main_139_141_out;
+	main_141_143 = altfp_compare32_1_main_141_143_out;
 end
 always @(*) begin
-	/* main: %139*/
-	/*   %or.cond5.i.1.i.i = and i1 %140, %141*/
-		main_139_orcond5i1ii = (main_139_140 & main_139_141);
+	/* main: %141*/
+	/*   %or.cond5.i.1.i.i = and i1 %142, %143*/
+		main_141_orcond5i1ii = (main_141_142 & main_141_143);
 end
 always @(*) begin
-	main_142_143 = altfp_compare32_1_main_142_143_out;
+	main_144_145 = altfp_compare32_1_main_144_145_out;
 end
 always @(*) begin
-	main_142_144 = altfp_compare32_1_main_142_144_out;
+	main_144_146 = altfp_compare32_1_main_144_146_out;
 end
 always @(*) begin
-	/* main: %142*/
-	/*   %or.cond14.i.1.i.i = and i1 %143, %144*/
-		main_142_orcond14i1ii = (main_142_143 & main_142_144);
+	/* main: %144*/
+	/*   %or.cond14.i.1.i.i = and i1 %145, %146*/
+		main_144_orcond14i1ii = (main_144_145 & main_144_146);
 end
 always @(*) begin
-	main_145_146 = altfp_compare32_1_main_145_146_out;
+	main_147_148 = altfp_compare32_1_main_147_148_out;
 end
 always @(*) begin
-	main_145_147 = altfp_compare32_1_main_145_147_out;
+	main_147_149 = altfp_compare32_1_main_147_149_out;
 end
 always @(*) begin
-	/* main: %145*/
-	/*   %or.cond7.i.1.i.i = and i1 %146, %147*/
-		main_145_orcond7i1ii = (main_145_146 & main_145_147);
+	/* main: %147*/
+	/*   %or.cond7.i.1.i.i = and i1 %148, %149*/
+		main_147_orcond7i1ii = (main_147_148 & main_147_149);
 end
 always @(*) begin
-	main_148_149 = altfp_compare32_1_main_148_149_out;
+	main_150_151 = altfp_compare32_1_main_150_151_out;
 end
 always @(*) begin
-	main_148_150 = altfp_compare32_1_main_148_150_out;
+	main_150_152 = altfp_compare32_1_main_150_152_out;
 end
 always @(*) begin
-	/* main: %148*/
-	/*   %or.cond15.i.1.i.i = and i1 %149, %150*/
-		main_148_orcond15i1ii = (main_148_149 & main_148_150);
+	/* main: %150*/
+	/*   %or.cond15.i.1.i.i = and i1 %151, %152*/
+		main_150_orcond15i1ii = (main_150_151 & main_150_152);
 end
 always @(*) begin
-	main_151_152 = altfp_compare32_1_main_151_152_out;
+	main_153_154 = altfp_compare32_1_main_153_154_out;
 end
 always @(*) begin
-	main_151_153 = altfp_compare32_1_main_151_153_out;
+	main_153_155 = altfp_compare32_1_main_153_155_out;
 end
 always @(*) begin
-	/* main: %151*/
-	/*   %or.cond9.i.1.i.i = and i1 %152, %153*/
-		main_151_orcond9i1ii = (main_151_152 & main_151_153);
+	/* main: %153*/
+	/*   %or.cond9.i.1.i.i = and i1 %154, %155*/
+		main_153_orcond9i1ii = (main_153_154 & main_153_155);
 end
 always @(*) begin
-	main_154_155 = altfp_compare32_1_main_154_155_out;
+	main_156_157 = altfp_compare32_1_main_156_157_out;
 end
 always @(*) begin
-	main_154_156 = altfp_compare32_1_main_154_156_out;
+	main_156_158 = altfp_compare32_1_main_156_158_out;
 end
 always @(*) begin
-	/* main: %154*/
-	/*   %or.cond11.i.1.i.i = and i1 %155, %156*/
-		main_154_orcond11i1ii = (main_154_155 & main_154_156);
+	/* main: %156*/
+	/*   %or.cond11.i.1.i.i = and i1 %157, %158*/
+		main_156_orcond11i1ii = (main_156_157 & main_156_158);
 end
 always @(*) begin
-	/* main: %154*/
+	/* main: %156*/
 	/*   %..i.1.i.i = select i1 %or.cond11.i.1.i.i, float 0x3F9E000000000000, float 0x3F48000040000000*/
-		main_154_i1ii = (main_154_orcond11i1ii ? 32'h3CF00000 : 32'h3A400002);
+		main_156_i1ii = (main_156_orcond11i1ii ? 32'h3CF00000 : 32'h3A400002);
 end
 always @(*) begin
-	/* main: %154*/
+	/* main: %156*/
 	/*   %.16.i.1.i.i = select i1 %or.cond11.i.1.i.i, float 0x3FED0068E0000000, float 1.000000e+00*/
-		main_154_16i1ii = (main_154_orcond11i1ii ? 32'h3F680347 : 32'h3F800000);
+		main_156_16i1ii = (main_156_orcond11i1ii ? 32'h3F680347 : 32'h3F800000);
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader5_350) & (memory_controller_waitrequest == 1'd0)) & (main_preheader5_126 == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader1_346) & (memory_controller_waitrequest == 1'd0)) & (main_preheader1_128 == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3A400002;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__127_352) & (memory_controller_waitrequest == 1'd0)) & (main_127_orcondi1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__129_348) & (memory_controller_waitrequest == 1'd0)) & (main_129_orcondi1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3CF00000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__130_354) & (memory_controller_waitrequest == 1'd0)) & (main_130_orcond12i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__132_350) & (memory_controller_waitrequest == 1'd0)) & (main_132_orcond12i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3DED8000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__133_356) & (memory_controller_waitrequest == 1'd0)) & (main_133_orcond3i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__135_352) & (memory_controller_waitrequest == 1'd0)) & (main_135_orcond3i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3E91A000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__136_358) & (memory_controller_waitrequest == 1'd0)) & (main_136_orcond13i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__138_354) & (memory_controller_waitrequest == 1'd0)) & (main_138_orcond13i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3F17D000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__139_360) & (memory_controller_waitrequest == 1'd0)) & (main_139_orcond5i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__141_356) & (memory_controller_waitrequest == 1'd0)) & (main_141_orcond5i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3F73F000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__142_362) & (memory_controller_waitrequest == 1'd0)) & (main_142_orcond14i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__144_358) & (memory_controller_waitrequest == 1'd0)) & (main_144_orcond14i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3F73F000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__145_364) & (memory_controller_waitrequest == 1'd0)) & (main_145_orcond7i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__147_360) & (memory_controller_waitrequest == 1'd0)) & (main_147_orcond7i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3F17D000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__148_366) & (memory_controller_waitrequest == 1'd0)) & (main_148_orcond15i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__150_362) & (memory_controller_waitrequest == 1'd0)) & (main_150_orcond15i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3E91A000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__151_368) & (memory_controller_waitrequest == 1'd0)) & (main_151_orcond9i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__153_364) & (memory_controller_waitrequest == 1'd0)) & (main_153_orcond9i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii = 32'h3DED8000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__154_370) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_linear_tanhexit1ii_a0i1ii = main_154_i1ii;
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__156_366) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_linear_tanhexit1ii_a0i1ii = main_156_i1ii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader5_350) & (memory_controller_waitrequest == 1'd0)) & (main_preheader5_126 == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader1_346) & (memory_controller_waitrequest == 1'd0)) & (main_preheader1_128 == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__127_352) & (memory_controller_waitrequest == 1'd0)) & (main_127_orcondi1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__129_348) & (memory_controller_waitrequest == 1'd0)) & (main_129_orcondi1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__130_354) & (memory_controller_waitrequest == 1'd0)) & (main_130_orcond12i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__132_350) & (memory_controller_waitrequest == 1'd0)) & (main_132_orcond12i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__133_356) & (memory_controller_waitrequest == 1'd0)) & (main_133_orcond3i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__135_352) & (memory_controller_waitrequest == 1'd0)) & (main_135_orcond3i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__136_358) & (memory_controller_waitrequest == 1'd0)) & (main_136_orcond13i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__138_354) & (memory_controller_waitrequest == 1'd0)) & (main_138_orcond13i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__139_360) & (memory_controller_waitrequest == 1'd0)) & (main_139_orcond5i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__141_356) & (memory_controller_waitrequest == 1'd0)) & (main_141_orcond5i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__142_362) & (memory_controller_waitrequest == 1'd0)) & (main_142_orcond14i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__144_358) & (memory_controller_waitrequest == 1'd0)) & (main_144_orcond14i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__145_364) & (memory_controller_waitrequest == 1'd0)) & (main_145_orcond7i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__147_360) & (memory_controller_waitrequest == 1'd0)) & (main_147_orcond7i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__148_366) & (memory_controller_waitrequest == 1'd0)) & (main_148_orcond15i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__150_362) & (memory_controller_waitrequest == 1'd0)) & (main_150_orcond15i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__151_368) & (memory_controller_waitrequest == 1'd0)) & (main_151_orcond9i1ii == 1'd1))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__153_364) & (memory_controller_waitrequest == 1'd0)) & (main_153_orcond9i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader5 ], [ 0x3F9E000000000000, %127 ], [ 0x3FBDB00000000000, %130 ], [ 0x3FD2340000000000, %133 ], [ 0x3FE2FA0000000000, %136 ], [ 0x3FEE7E0000000000, %139 ], [ 0x3FEE7E0000000000, %142 ], [ 0x3FE2FA0000000000, %145 ], [ 0x3FD2340000000000, %148 ], [ 0x3FBDB00000000000, %151 ], [ %..i.1.i.i, %154 ]*/
-	if (((cur_state == LEGUP_F_main_BB__154_370) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %a.0.i.1.i.i = phi float [ 0x3F48000040000000, %.preheader1 ], [ 0x3F9E000000000000, %129 ], [ 0x3FBDB00000000000, %132 ], [ 0x3FD2340000000000, %135 ], [ 0x3FE2FA0000000000, %138 ], [ 0x3FEE7E0000000000, %141 ], [ 0x3FEE7E0000000000, %144 ], [ 0x3FE2FA0000000000, %147 ], [ 0x3FD2340000000000, %150 ], [ 0x3FBDB00000000000, %153 ], [ %..i.1.i.i, %156 ]*/
+	if (((cur_state == LEGUP_F_main_BB__156_366) & (memory_controller_waitrequest == 1'd0))) begin
 		main_linear_tanhexit1ii_a0i1ii_reg <= main_linear_tanhexit1ii_a0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_a0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_a0i1ii_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader5_350) & (memory_controller_waitrequest == 1'd0)) & (main_preheader5_126 == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader1_346) & (memory_controller_waitrequest == 1'd0)) & (main_preheader1_128 == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'hBF800000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__127_352) & (memory_controller_waitrequest == 1'd0)) & (main_127_orcondi1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__129_348) & (memory_controller_waitrequest == 1'd0)) & (main_129_orcondi1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'hBF680347;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__130_354) & (memory_controller_waitrequest == 1'd0)) & (main_130_orcond12i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__132_350) & (memory_controller_waitrequest == 1'd0)) & (main_132_orcond12i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'hBF400000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__133_356) & (memory_controller_waitrequest == 1'd0)) & (main_133_orcond3i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__135_352) & (memory_controller_waitrequest == 1'd0)) & (main_135_orcond3i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'hBF000000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__136_358) & (memory_controller_waitrequest == 1'd0)) & (main_136_orcond13i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__138_354) & (memory_controller_waitrequest == 1'd0)) & (main_138_orcond13i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'hBE400000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__139_360) & (memory_controller_waitrequest == 1'd0)) & (main_139_orcond5i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__141_356) & (memory_controller_waitrequest == 1'd0)) & (main_141_orcond5i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'h0;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__142_362) & (memory_controller_waitrequest == 1'd0)) & (main_142_orcond14i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__144_358) & (memory_controller_waitrequest == 1'd0)) & (main_144_orcond14i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'h0;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__145_364) & (memory_controller_waitrequest == 1'd0)) & (main_145_orcond7i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__147_360) & (memory_controller_waitrequest == 1'd0)) & (main_147_orcond7i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'h3E400000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__148_366) & (memory_controller_waitrequest == 1'd0)) & (main_148_orcond15i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__150_362) & (memory_controller_waitrequest == 1'd0)) & (main_150_orcond15i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'h3F000000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__151_368) & (memory_controller_waitrequest == 1'd0)) & (main_151_orcond9i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__153_364) & (memory_controller_waitrequest == 1'd0)) & (main_153_orcond9i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii = 32'h3F400000;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__154_370) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_linear_tanhexit1ii_b0i1ii = main_154_16i1ii;
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__156_366) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_linear_tanhexit1ii_b0i1ii = main_156_16i1ii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_preheader5_350) & (memory_controller_waitrequest == 1'd0)) & (main_preheader5_126 == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_preheader1_346) & (memory_controller_waitrequest == 1'd0)) & (main_preheader1_128 == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__127_352) & (memory_controller_waitrequest == 1'd0)) & (main_127_orcondi1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__129_348) & (memory_controller_waitrequest == 1'd0)) & (main_129_orcondi1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__130_354) & (memory_controller_waitrequest == 1'd0)) & (main_130_orcond12i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__132_350) & (memory_controller_waitrequest == 1'd0)) & (main_132_orcond12i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__133_356) & (memory_controller_waitrequest == 1'd0)) & (main_133_orcond3i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__135_352) & (memory_controller_waitrequest == 1'd0)) & (main_135_orcond3i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__136_358) & (memory_controller_waitrequest == 1'd0)) & (main_136_orcond13i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__138_354) & (memory_controller_waitrequest == 1'd0)) & (main_138_orcond13i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__139_360) & (memory_controller_waitrequest == 1'd0)) & (main_139_orcond5i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__141_356) & (memory_controller_waitrequest == 1'd0)) & (main_141_orcond5i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__142_362) & (memory_controller_waitrequest == 1'd0)) & (main_142_orcond14i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__144_358) & (memory_controller_waitrequest == 1'd0)) & (main_144_orcond14i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__145_364) & (memory_controller_waitrequest == 1'd0)) & (main_145_orcond7i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__147_360) & (memory_controller_waitrequest == 1'd0)) & (main_147_orcond7i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__148_366) & (memory_controller_waitrequest == 1'd0)) & (main_148_orcond15i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__150_362) & (memory_controller_waitrequest == 1'd0)) & (main_150_orcond15i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__151_368) & (memory_controller_waitrequest == 1'd0)) & (main_151_orcond9i1ii == 1'd1))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__153_364) & (memory_controller_waitrequest == 1'd0)) & (main_153_orcond9i1ii == 1'd1))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader5 ], [ 0xBFED0068E0000000, %127 ], [ -7.500000e-01, %130 ], [ -5.000000e-01, %133 ], [ -1.875000e-01, %136 ], [ 0.000000e+00, %139 ], [ 0.000000e+00, %142 ], [ 1.875000e-01, %145 ], [ 5.000000e-01, %148 ], [ 7.500000e-01, %151 ], [ %.16.i.1.i.i, %154 ]*/
-	if (((cur_state == LEGUP_F_main_BB__154_370) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %b.0.i.1.i.i = phi float [ -1.000000e+00, %.preheader1 ], [ 0xBFED0068E0000000, %129 ], [ -7.500000e-01, %132 ], [ -5.000000e-01, %135 ], [ -1.875000e-01, %138 ], [ 0.000000e+00, %141 ], [ 0.000000e+00, %144 ], [ 1.875000e-01, %147 ], [ 5.000000e-01, %150 ], [ 7.500000e-01, %153 ], [ %.16.i.1.i.i, %156 ]*/
+	if (((cur_state == LEGUP_F_main_BB__156_366) & (memory_controller_waitrequest == 1'd0))) begin
 		main_linear_tanhexit1ii_b0i1ii_reg <= main_linear_tanhexit1ii_b0i1ii;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_b0i1ii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_b0i1ii_reg"); $finish; end
 	end
-end
-always @(*) begin
-	main_linear_tanhexit1ii_157 = main_altfp_multiply_32_0;
-end
-always @(*) begin
-	main_linear_tanhexit1ii_158 = main_altfp_add_32_0;
 end
 always @(*) begin
 	main_linear_tanhexit1ii_159 = main_altfp_multiply_32_0;
@@ -6474,150 +6381,158 @@ end
 always @(*) begin
 	main_linear_tanhexit1ii_160 = main_altfp_add_32_0;
 end
+always @(*) begin
+	main_linear_tanhexit1ii_161 = main_altfp_multiply_32_0;
+end
+always @(*) begin
+	main_linear_tanhexit1ii_162 = main_altfp_add_32_0;
+end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %160 = fadd float %123, %159*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_421)) begin
-		main_linear_tanhexit1ii_160_reg <= main_linear_tanhexit1ii_160;
-		if (start == 1'b0 && ^(main_linear_tanhexit1ii_160) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_160_reg"); $finish; end
+	/*   %162 = fadd float %125, %161*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_417)) begin
+		main_linear_tanhexit1ii_162_reg <= main_linear_tanhexit1ii_162;
+		if (start == 1'b0 && ^(main_linear_tanhexit1ii_162) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_162_reg"); $finish; end
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %160 = fadd float %123, %159*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_421)) begin
-		main_linear_tanhexit1ii_160_reg <= main_linear_tanhexit1ii_160;
-		if (start == 1'b0 && ^(main_linear_tanhexit1ii_160) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_160_reg"); $finish; end
+	/*   %162 = fadd float %125, %161*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_417)) begin
+		main_linear_tanhexit1ii_162_reg <= main_linear_tanhexit1ii_162;
+		if (start == 1'b0 && ^(main_linear_tanhexit1ii_162) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_162_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %161 = add nsw i32 %t.119.1.i.i, 1*/
-		main_linear_tanhexit1ii_161 = (main_preheader5_t1191ii_reg + 32'd1);
+	/*   %163 = add nsw i32 %t.119.1.i.i, 1*/
+		main_linear_tanhexit1ii_163 = (main_preheader1_t1191ii_reg + 32'd1);
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %161 = add nsw i32 %t.119.1.i.i, 1*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_371)) begin
-		main_linear_tanhexit1ii_161_reg <= main_linear_tanhexit1ii_161;
-		if (start == 1'b0 && ^(main_linear_tanhexit1ii_161) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_161_reg"); $finish; end
+	/*   %163 = add nsw i32 %t.119.1.i.i, 1*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_367)) begin
+		main_linear_tanhexit1ii_163_reg <= main_linear_tanhexit1ii_163;
+		if (start == 1'b0 && ^(main_linear_tanhexit1ii_163) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_163_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %exitcond6 = icmp eq i32 %161, 64*/
-		main_linear_tanhexit1ii_exitcond6 = (main_linear_tanhexit1ii_161 == 32'd64);
+	/*   %exitcond6 = icmp eq i32 %163, 64*/
+		main_linear_tanhexit1ii_exitcond6 = (main_linear_tanhexit1ii_163 == 32'd64);
 end
 always @(posedge clk) begin
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %exitcond6 = icmp eq i32 %161, 64*/
-	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_371)) begin
+	/*   %exitcond6 = icmp eq i32 %163, 64*/
+	if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_367)) begin
 		main_linear_tanhexit1ii_exitcond6_reg <= main_linear_tanhexit1ii_exitcond6;
 		if (start == 1'b0 && ^(main_linear_tanhexit1ii_exitcond6) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_linear_tanhexit1ii_exitcond6_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %rotate.exit.i*/
-	/*   %162 = add nsw i32 %2, 1*/
-		main_rotateexiti_162 = (main_1_2_reg + 32'd1);
+	/*   %164 = bitcast float %7 to i32*/
+		main_rotateexiti_164 = main_1_7_reg;
 end
 always @(posedge clk) begin
 	/* main: %rotate.exit.i*/
-	/*   %162 = add nsw i32 %2, 1*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_423)) begin
-		main_rotateexiti_162_reg <= main_rotateexiti_162;
-		if (start == 1'b0 && ^(main_rotateexiti_162) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_162_reg"); $finish; end
+	/*   %164 = bitcast float %7 to i32*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_419)) begin
+		main_rotateexiti_164_reg <= main_rotateexiti_164;
+		if (start == 1'b0 && ^(main_rotateexiti_164) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_164_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_rotateexiti_163 = main_altfp_multiply_32_0;
+	/* main: %rotate.exit.i*/
+	/*   %165 = bitcast float %6 to i32*/
+		main_rotateexiti_165 = main_1_6_reg;
 end
-always @(*) begin
-	main_rotateexiti_164 = main_altfp_multiply_32_0;
-end
-always @(*) begin
-	main_rotateexiti_165 = main_altfp_subtract_32_0;
+always @(posedge clk) begin
+	/* main: %rotate.exit.i*/
+	/*   %165 = bitcast float %6 to i32*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_419)) begin
+		main_rotateexiti_165_reg <= main_rotateexiti_165;
+		if (start == 1'b0 && ^(main_rotateexiti_165) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_165_reg"); $finish; end
+	end
 end
 always @(*) begin
 	main_rotateexiti_166 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-/* main: %rotate.exit.i*/
-/*   %166 = fmul float %165, 5.000000e-01*/
-	main_rotateexiti_166_reg = main_1_3_reg;
+	main_rotateexiti_167 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-	main_rotateexiti_167 = main_altfp_subtract_32_0;
-end
-always @(*) begin
-/* main: %rotate.exit.i*/
-/*   %167 = fsub float %160, %164*/
-	main_rotateexiti_167_reg = main_23_26_reg;
-end
-always @(*) begin
-	main_rotateexiti_168 = main_altfp_multiply_32_0;
-end
-always @(*) begin
-/* main: %rotate.exit.i*/
-/*   %168 = fmul float %167, 5.000000e-01*/
-	main_rotateexiti_168_reg = main_1_5_reg;
+	main_rotateexiti_168 = main_altfp_subtract_32_0;
 end
 always @(*) begin
 	main_rotateexiti_169 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-	main_rotateexiti_170 = main_altfp_add_32_0;
+/* main: %rotate.exit.i*/
+/*   %169 = fmul float %168, 5.000000e-01*/
+	main_rotateexiti_169_reg = main_1_8_reg;
+end
+always @(*) begin
+	main_rotateexiti_170 = main_altfp_subtract_32_0;
+end
+always @(*) begin
+/* main: %rotate.exit.i*/
+/*   %170 = fsub float %162, %167*/
+	main_rotateexiti_170_reg = main_28_31_reg;
 end
 always @(*) begin
 	main_rotateexiti_171 = main_altfp_multiply_32_0;
 end
+always @(*) begin
+/* main: %rotate.exit.i*/
+/*   %171 = fmul float %170, 5.000000e-01*/
+	main_rotateexiti_171_reg = main_1_10_reg;
+end
+always @(*) begin
+	main_rotateexiti_172 = main_altfp_multiply_32_0;
+end
+always @(*) begin
+	main_rotateexiti_173 = main_altfp_add_32_0;
+end
+always @(*) begin
+	main_rotateexiti_174 = main_altfp_multiply_32_0;
+end
 always @(posedge clk) begin
 	/* main: %rotate.exit.i*/
-	/*   %171 = fmul float %168, %168*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_482)) begin
-		main_rotateexiti_171_reg <= main_rotateexiti_171;
-		if (start == 1'b0 && ^(main_rotateexiti_171) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_171_reg"); $finish; end
+	/*   %174 = fmul float %171, %171*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_478)) begin
+		main_rotateexiti_174_reg <= main_rotateexiti_174;
+		if (start == 1'b0 && ^(main_rotateexiti_174) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_174_reg"); $finish; end
 	end
 	/* main: %rotate.exit.i*/
-	/*   %171 = fmul float %168, %168*/
-	if ((cur_state == LEGUP_F_main_BB_rotateexiti_482)) begin
-		main_rotateexiti_171_reg <= main_rotateexiti_171;
-		if (start == 1'b0 && ^(main_rotateexiti_171) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_171_reg"); $finish; end
+	/*   %174 = fmul float %171, %171*/
+	if ((cur_state == LEGUP_F_main_BB_rotateexiti_478)) begin
+		main_rotateexiti_174_reg <= main_rotateexiti_174;
+		if (start == 1'b0 && ^(main_rotateexiti_174) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_174_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %195 = fmul float %166, %194*/
-	if ((cur_state == LEGUP_F_main_BB_normalizeexiti_548)) begin
-		main_rotateexiti_171_reg <= main_normalizeexiti_195;
-		if (start == 1'b0 && ^(main_normalizeexiti_195) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_171_reg"); $finish; end
+	/*   %198 = fmul float %169, %197*/
+	if ((cur_state == LEGUP_F_main_BB_normalizeexiti_544)) begin
+		main_rotateexiti_174_reg <= main_normalizeexiti_198;
+		if (start == 1'b0 && ^(main_normalizeexiti_198) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_rotateexiti_174_reg"); $finish; end
 	end
 end
 always @(*) begin
-	main_rotateexiti_172 = main_altfp_add_32_0;
+	main_rotateexiti_175 = main_altfp_add_32_0;
 end
 always @(*) begin
 /* main: %rotate.exit.i*/
-/*   %172 = fadd float %170, %171*/
-	main_rotateexiti_172_reg = main_1_6_reg;
+/*   %175 = fadd float %173, %174*/
+	main_rotateexiti_175_reg = main_1_11_reg;
 end
 always @(*) begin
-	main_rotateexiti_173 = altfp_compare32_1_main_rotateexiti_173_out;
+	main_rotateexiti_176 = altfp_compare32_1_main_rotateexiti_176_out;
 end
 always @(*) begin
-	main_rotateexiti_174 = altfp_compare32_1_main_rotateexiti_174_out;
+	main_rotateexiti_177 = altfp_compare32_1_main_rotateexiti_177_out;
 end
 always @(*) begin
 	/* main: %rotate.exit.i*/
-	/*   %or.cond.i.i.i.i = and i1 %173, %174*/
-		main_rotateexiti_orcondiiii = (main_rotateexiti_173 & main_rotateexiti_174);
-end
-always @(*) begin
-	main_175_176 = altfp_compare32_1_main_175_176_out;
-end
-always @(*) begin
-	main_175_177 = altfp_compare32_1_main_175_177_out;
-end
-always @(*) begin
-	/* main: %175*/
-	/*   %or.cond3.i.i.i.i = and i1 %176, %177*/
-		main_175_orcond3iiii = (main_175_176 & main_175_177);
+	/*   %or.cond.i.i.i.i = and i1 %176, %177*/
+		main_rotateexiti_orcondiiii = (main_rotateexiti_176 & main_rotateexiti_177);
 end
 always @(*) begin
 	main_178_179 = altfp_compare32_1_main_178_179_out;
@@ -6627,8 +6542,8 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %178*/
-	/*   %or.cond5.i.i.i.i = and i1 %179, %180*/
-		main_178_orcond5iiii = (main_178_179 & main_178_180);
+	/*   %or.cond3.i.i.i.i = and i1 %179, %180*/
+		main_178_orcond3iiii = (main_178_179 & main_178_180);
 end
 always @(*) begin
 	main_181_182 = altfp_compare32_1_main_181_182_out;
@@ -6638,8 +6553,8 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %181*/
-	/*   %or.cond7.i.i.i.i = and i1 %182, %183*/
-		main_181_orcond7iiii = (main_181_182 & main_181_183);
+	/*   %or.cond5.i.i.i.i = and i1 %182, %183*/
+		main_181_orcond5iiii = (main_181_182 & main_181_183);
 end
 always @(*) begin
 	main_184_185 = altfp_compare32_1_main_184_185_out;
@@ -6649,8 +6564,8 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %184*/
-	/*   %or.cond9.i.i.i.i = and i1 %185, %186*/
-		main_184_orcond9iiii = (main_184_185 & main_184_186);
+	/*   %or.cond7.i.i.i.i = and i1 %185, %186*/
+		main_184_orcond7iiii = (main_184_185 & main_184_186);
 end
 always @(*) begin
 	main_187_188 = altfp_compare32_1_main_187_188_out;
@@ -6660,8 +6575,8 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %187*/
-	/*   %or.cond11.i.i.i.i = and i1 %188, %189*/
-		main_187_orcond11iiii = (main_187_188 & main_187_189);
+	/*   %or.cond9.i.i.i.i = and i1 %188, %189*/
+		main_187_orcond9iiii = (main_187_188 & main_187_189);
 end
 always @(*) begin
 	main_190_191 = altfp_compare32_1_main_190_191_out;
@@ -6671,957 +6586,877 @@ always @(*) begin
 end
 always @(*) begin
 	/* main: %190*/
-	/*   %or.cond13.i.i.i.i = and i1 %191, %192*/
-		main_190_orcond13iiii = (main_190_191 & main_190_192);
+	/*   %or.cond11.i.i.i.i = and i1 %191, %192*/
+		main_190_orcond11iiii = (main_190_191 & main_190_192);
 end
 always @(*) begin
-	/* main: %190*/
+	main_193_194 = altfp_compare32_1_main_193_194_out;
+end
+always @(*) begin
+	main_193_195 = altfp_compare32_1_main_193_195_out;
+end
+always @(*) begin
+	/* main: %193*/
+	/*   %or.cond13.i.i.i.i = and i1 %194, %195*/
+		main_193_orcond13iiii = (main_193_194 & main_193_195);
+end
+always @(*) begin
+	/* main: %193*/
 	/*   %..i.i.i.i = select i1 %or.cond13.i.i.i.i, float 0xBEFAAA5040000000, float 0xBEE2DA7840000000*/
-		main_190_iiii = (main_190_orcond13iiii ? 32'hB7D55282 : 32'hB716D3C2);
+		main_193_iiii = (main_193_orcond13iiii ? 32'hB7D55282 : 32'hB716D3C2);
 end
 always @(*) begin
-	/* main: %190*/
+	/* main: %193*/
 	/*   %.14.i.i.i.i = select i1 %or.cond13.i.i.i.i, float 0x3FACB923A0000000, float 0x3FA4538F00000000*/
-		main_190_14iiii = (main_190_orcond13iiii ? 32'h3D65C91D : 32'h3D229C78);
+		main_193_14iiii = (main_193_orcond13iiii ? 32'h3D65C91D : 32'h3D229C78);
 end
 always @(*) begin
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_499) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_495) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii = 32'hBCDEC68F;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__175_501) & (memory_controller_waitrequest == 1'd0)) & (main_175_orcond3iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__178_497) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond3iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii = 32'hBB513592;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__178_503) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond5iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__181_499) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond5iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii = 32'hBA9C250F;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__181_505) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond7iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__184_501) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond7iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii = 32'hB9E5BCDE;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__184_507) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond9iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__187_503) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond9iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii = 32'hB93DF5C4;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__187_509) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond11iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__190_505) & (memory_controller_waitrequest == 1'd0)) & (main_190_orcond11iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii = 32'hB896DE7E;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__190_511) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_normalizeexiti_a0iiii = main_190_iiii;
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__193_507) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_normalizeexiti_a0iiii = main_193_iiii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_499) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_495) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__175_501) & (memory_controller_waitrequest == 1'd0)) & (main_175_orcond3iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__178_497) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond3iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__178_503) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond5iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__181_499) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond5iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__181_505) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond7iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__184_501) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond7iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__184_507) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond9iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__187_503) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond9iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__187_509) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond11iiii == 1'd1))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__190_505) & (memory_controller_waitrequest == 1'd0)) & (main_190_orcond11iiii == 1'd1))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %175 ], [ 0xBF5384A1E0000000, %178 ], [ 0xBF3CB79BC0000000, %181 ], [ 0xBF27BEB880000000, %184 ], [ 0xBF12DBCFC0000000, %187 ], [ %..i.i.i.i, %190 ]*/
-	if (((cur_state == LEGUP_F_main_BB__190_511) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %a.0.i.i.i.i = phi float [ 0xBF9BD8D1E0000000, %rotate.exit.i ], [ 0xBF6A26B240000000, %178 ], [ 0xBF5384A1E0000000, %181 ], [ 0xBF3CB79BC0000000, %184 ], [ 0xBF27BEB880000000, %187 ], [ 0xBF12DBCFC0000000, %190 ], [ %..i.i.i.i, %193 ]*/
+	if (((cur_state == LEGUP_F_main_BB__193_507) & (memory_controller_waitrequest == 1'd0))) begin
 		main_normalizeexiti_a0iiii_reg <= main_normalizeexiti_a0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_a0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_a0iiii_reg"); $finish; end
 	end
 end
 always @(*) begin
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_499) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_495) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii = 32'h3F2A511A;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__175_501) & (memory_controller_waitrequest == 1'd0)) & (main_175_orcond3iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__178_497) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond3iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii = 32'h3E90068E;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__178_503) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond5iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__181_499) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond5iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii = 32'h3E4EF34D;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__181_505) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond7iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__184_501) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond7iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii = 32'h3E147AE1;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__184_507) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond9iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__187_503) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond9iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii = 32'h3DDC28F6;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	else if ((((cur_state == LEGUP_F_main_BB__187_509) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond11iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	else if ((((cur_state == LEGUP_F_main_BB__190_505) & (memory_controller_waitrequest == 1'd0)) & (main_190_orcond11iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii = 32'h3DA29C78;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB__190_511) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_normalizeexiti_b0iiii = main_190_14iiii;
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	else /* if (((cur_state == LEGUP_F_main_BB__193_507) & (memory_controller_waitrequest == 1'd0))) */ begin
+		main_normalizeexiti_b0iiii = main_193_14iiii;
 	end
 end
 always @(posedge clk) begin
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_499) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB_rotateexiti_495) & (memory_controller_waitrequest == 1'd0)) & (main_rotateexiti_orcondiiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__175_501) & (memory_controller_waitrequest == 1'd0)) & (main_175_orcond3iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__178_497) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond3iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__178_503) & (memory_controller_waitrequest == 1'd0)) & (main_178_orcond5iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__181_499) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond5iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__181_505) & (memory_controller_waitrequest == 1'd0)) & (main_181_orcond7iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__184_501) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond7iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__184_507) & (memory_controller_waitrequest == 1'd0)) & (main_184_orcond9iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__187_503) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond9iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if ((((cur_state == LEGUP_F_main_BB__187_509) & (memory_controller_waitrequest == 1'd0)) & (main_187_orcond11iiii == 1'd1))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if ((((cur_state == LEGUP_F_main_BB__190_505) & (memory_controller_waitrequest == 1'd0)) & (main_190_orcond11iiii == 1'd1))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
 	/* main: %normalize.exit.i*/
-	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %175 ], [ 0x3FC9DE69A0000000, %178 ], [ 0x3FC28F5C20000000, %181 ], [ 0x3FBB851EC0000000, %184 ], [ 0x3FB4538F00000000, %187 ], [ %.14.i.i.i.i, %190 ]*/
-	if (((cur_state == LEGUP_F_main_BB__190_511) & (memory_controller_waitrequest == 1'd0))) begin
+	/*   %b.0.i.i.i.i = phi float [ 0x3FE54A2340000000, %rotate.exit.i ], [ 0x3FD200D1C0000000, %178 ], [ 0x3FC9DE69A0000000, %181 ], [ 0x3FC28F5C20000000, %184 ], [ 0x3FBB851EC0000000, %187 ], [ 0x3FB4538F00000000, %190 ], [ %.14.i.i.i.i, %193 ]*/
+	if (((cur_state == LEGUP_F_main_BB__193_507) & (memory_controller_waitrequest == 1'd0))) begin
 		main_normalizeexiti_b0iiii_reg <= main_normalizeexiti_b0iiii;
 		if (start == 1'b0 && ^(main_normalizeexiti_b0iiii) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_b0iiii_reg"); $finish; end
 	end
-end
-always @(*) begin
-	main_normalizeexiti_193 = main_altfp_multiply_32_0;
-end
-always @(*) begin
-	main_normalizeexiti_194 = main_altfp_add_32_0;
-end
-always @(*) begin
-/* main: %normalize.exit.i*/
-/*   %194 = fadd float %193, %b.0.i.i.i.i*/
-	main_normalizeexiti_194_reg = main_1_4_reg;
-end
-always @(*) begin
-	main_normalizeexiti_195 = main_altfp_multiply_32_0;
-end
-always @(*) begin
-/* main: %normalize.exit.i*/
-/*   %195 = fmul float %166, %194*/
-	main_normalizeexiti_195_reg = main_rotateexiti_171_reg;
 end
 always @(*) begin
 	main_normalizeexiti_196 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-	/* main: %normalize.exit.i*/
-	/*   %197 = icmp sgt i32 %2, 9*/
-		main_normalizeexiti_197 = ($signed(main_1_2_reg) > $signed(32'd9));
-end
-always @(posedge clk) begin
-	/* main: %normalize.exit.i*/
-	/*   %197 = icmp sgt i32 %2, 9*/
-	if ((cur_state == LEGUP_F_main_BB_normalizeexiti_512)) begin
-		main_normalizeexiti_197_reg <= main_normalizeexiti_197;
-		if (start == 1'b0 && ^(main_normalizeexiti_197) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_normalizeexiti_197_reg"); $finish; end
-	end
+	main_normalizeexiti_197 = main_altfp_add_32_0;
 end
 always @(*) begin
-	/* main: %198*/
-	/*   %.pre9 = load i32* bitcast ([2 x float]* @w to i32*), align 4, !tbaa !5*/
-		main_198_pre9 = memory_controller_out_a[31:0];
+/* main: %normalize.exit.i*/
+/*   %197 = fadd float %196, %b.0.i.i.i.i*/
+	main_normalizeexiti_197_reg = main_1_9_reg;
 end
 always @(*) begin
-	/* main: %198*/
-	/*   %.pre10 = load i32* bitcast (float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1) to i32*), align 4, !tbaa !5*/
-		main_198_pre10 = memory_controller_out_b[31:0];
+	main_normalizeexiti_198 = main_altfp_multiply_32_0;
 end
 always @(*) begin
-	/* main: %fastica.exit.loopexit*/
-	/*   %200 = bitcast float %.in1 to i32*/
-		main_fasticaexitloopexit_200 = main_1_in1_reg;
+/* main: %normalize.exit.i*/
+/*   %198 = fmul float %169, %197*/
+	main_normalizeexiti_198_reg = main_rotateexiti_174_reg;
 end
 always @(*) begin
-	/* main: %fastica.exit.loopexit*/
-	/*   %201 = bitcast float %.in to i32*/
-		main_fasticaexitloopexit_201 = main_1_in_reg;
-end
-always @(*) begin
-	/* main: %fastica.exit*/
-	/*   %202 = phi i32 [ %.pre10, %198 ], [ %201, %fastica.exit.loopexit ]*/
-	if (((cur_state == LEGUP_F_main_BB__198_552) & (memory_controller_waitrequest == 1'd0))) begin
-		main_fasticaexit_202 = main_198_pre10;
-	end
-	/* main: %fastica.exit*/
-	/*   %202 = phi i32 [ %.pre10, %198 ], [ %201, %fastica.exit.loopexit ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB_fasticaexitloopexit_553) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_fasticaexit_202 = main_fasticaexitloopexit_201;
-	end
-end
-always @(posedge clk) begin
-	/* main: %fastica.exit*/
-	/*   %202 = phi i32 [ %.pre10, %198 ], [ %201, %fastica.exit.loopexit ]*/
-	if (((cur_state == LEGUP_F_main_BB__198_552) & (memory_controller_waitrequest == 1'd0))) begin
-		main_fasticaexit_202_reg <= main_fasticaexit_202;
-		if (start == 1'b0 && ^(main_fasticaexit_202) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_fasticaexit_202_reg"); $finish; end
-	end
-	/* main: %fastica.exit*/
-	/*   %202 = phi i32 [ %.pre10, %198 ], [ %201, %fastica.exit.loopexit ]*/
-	if (((cur_state == LEGUP_F_main_BB_fasticaexitloopexit_553) & (memory_controller_waitrequest == 1'd0))) begin
-		main_fasticaexit_202_reg <= main_fasticaexit_202;
-		if (start == 1'b0 && ^(main_fasticaexit_202) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_fasticaexit_202_reg"); $finish; end
-	end
-end
-always @(*) begin
-	/* main: %fastica.exit*/
-	/*   %203 = phi i32 [ %.pre9, %198 ], [ %200, %fastica.exit.loopexit ]*/
-	if (((cur_state == LEGUP_F_main_BB__198_552) & (memory_controller_waitrequest == 1'd0))) begin
-		main_fasticaexit_203 = main_198_pre9;
-	end
-	/* main: %fastica.exit*/
-	/*   %203 = phi i32 [ %.pre9, %198 ], [ %200, %fastica.exit.loopexit ]*/
-	else /* if (((cur_state == LEGUP_F_main_BB_fasticaexitloopexit_553) & (memory_controller_waitrequest == 1'd0))) */ begin
-		main_fasticaexit_203 = main_fasticaexitloopexit_200;
-	end
-end
-always @(posedge clk) begin
-	/* main: %fastica.exit*/
-	/*   %203 = phi i32 [ %.pre9, %198 ], [ %200, %fastica.exit.loopexit ]*/
-	if (((cur_state == LEGUP_F_main_BB__198_552) & (memory_controller_waitrequest == 1'd0))) begin
-		main_fasticaexit_203_reg <= main_fasticaexit_203;
-		if (start == 1'b0 && ^(main_fasticaexit_203) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_fasticaexit_203_reg"); $finish; end
-	end
-	/* main: %fastica.exit*/
-	/*   %203 = phi i32 [ %.pre9, %198 ], [ %200, %fastica.exit.loopexit ]*/
-	if (((cur_state == LEGUP_F_main_BB_fasticaexitloopexit_553) & (memory_controller_waitrequest == 1'd0))) begin
-		main_fasticaexit_203_reg <= main_fasticaexit_203;
-		if (start == 1'b0 && ^(main_fasticaexit_203) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to main_fasticaexit_203_reg"); $finish; end
-	end
+	main_normalizeexiti_199 = main_altfp_multiply_32_0;
 end
 always @(*) begin
 	/* main: %1*/
-	/*   %3 = fmul float %.in1, %w_next.0.0*/
-	if ((cur_state == LEGUP_F_main_BB__1_4)) begin
-		main_altfp_multiply_32_0_op0 = main_1_in1_reg;
+	/*   %8 = fmul float %5, %7*/
+	if ((cur_state == LEGUP_F_main_BB__1_1)) begin
+		main_altfp_multiply_32_0_op0 = main_1_5_reg;
 	end
 	/* main: %1*/
-	/*   %5 = fmul float %.in, %w_next.1.0*/
-	else if ((cur_state == LEGUP_F_main_BB__1_5)) begin
-		main_altfp_multiply_32_0_op0 = main_1_in_reg;
+	/*   %10 = fmul float %4, %6*/
+	else if ((cur_state == LEGUP_F_main_BB__1_2)) begin
+		main_altfp_multiply_32_0_op0 = main_1_4_reg;
 	end
-	/* main: %32*/
-	/*   %34 = fmul float %w_next.0.0, %33*/
-	else if ((cur_state == LEGUP_F_main_BB__32_160)) begin
-		main_altfp_multiply_32_0_op0 = main_1_w_next00_reg;
+	/* main: %.preheader2*/
+	/*   %36 = fmul float %7, %35*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_156)) begin
+		main_altfp_multiply_32_0_op0 = main_1_7_reg;
 	end
-	/* main: %32*/
-	/*   %37 = fmul float %w_next.1.0, %36*/
-	else if ((cur_state == LEGUP_F_main_BB__32_161)) begin
-		main_altfp_multiply_32_0_op0 = main_1_w_next10_reg;
-	end
-	/* main: %linear_tanh.exit.i.i*/
-	/*   %74 = fmul float %42, %a.0.i.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_226)) begin
-		main_altfp_multiply_32_0_op0 = main_preheader15ii_42_reg;
+	/* main: %.preheader2*/
+	/*   %39 = fmul float %6, %38*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_157)) begin
+		main_altfp_multiply_32_0_op0 = main_1_6_reg;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %76 = fmul float %41, %75*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_251)) begin
-		main_altfp_multiply_32_0_op0 = main_preheader15ii_41_reg;
+	/*   %76 = fmul float %44, %a.0.i.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_222)) begin
+		main_altfp_multiply_32_0_op0 = main_preheader15ii_44_reg;
+	end
+	/* main: %linear_tanh.exit.i.i*/
+	/*   %78 = fmul float %43, %77*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_247)) begin
+		main_altfp_multiply_32_0_op0 = main_preheader15ii_43_reg;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %119 = fmul float %80, %a.0.i12.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_307)) begin
-		main_altfp_multiply_32_0_op0 = main_preheader_80_reg;
+	/*   %121 = fmul float %82, %a.0.i12.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_303)) begin
+		main_altfp_multiply_32_0_op0 = main_preheader_82_reg;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %157 = fmul float %125, %a.0.i.1.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_371)) begin
-		main_altfp_multiply_32_0_op0 = main_preheader5_125_reg;
+	/*   %159 = fmul float %127, %a.0.i.1.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_367)) begin
+		main_altfp_multiply_32_0_op0 = main_preheader1_127_reg;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %159 = fmul float %124, %158*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_396)) begin
-		main_altfp_multiply_32_0_op0 = main_preheader5_124_reg;
+	/*   %161 = fmul float %126, %160*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_392)) begin
+		main_altfp_multiply_32_0_op0 = main_preheader1_126_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %163 = fmul float %w_next.0.0, %121*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_423)) begin
-		main_altfp_multiply_32_0_op0 = main_1_w_next00_reg;
+	/*   %166 = fmul float %7, %123*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_419)) begin
+		main_altfp_multiply_32_0_op0 = main_1_7_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %164 = fmul float %w_next.1.0, %121*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_424)) begin
-		main_altfp_multiply_32_0_op0 = main_1_w_next10_reg;
+	/*   %167 = fmul float %6, %123*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_420)) begin
+		main_altfp_multiply_32_0_op0 = main_1_6_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %166 = fmul float %165, 5.000000e-01*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_448)) begin
-		main_altfp_multiply_32_0_op0 = main_rotateexiti_165;
-	end
-	/* main: %rotate.exit.i*/
-	/*   %169 = fmul float %166, %166*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_459)) begin
-		main_altfp_multiply_32_0_op0 = main_rotateexiti_166;
-	end
-	/* main: %rotate.exit.i*/
-	/*   %168 = fmul float %167, 5.000000e-01*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_460)) begin
-		main_altfp_multiply_32_0_op0 = main_rotateexiti_167_reg;
-	end
-	/* main: %rotate.exit.i*/
-	/*   %171 = fmul float %168, %168*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_471)) begin
+	/*   %169 = fmul float %168, 5.000000e-01*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_444)) begin
 		main_altfp_multiply_32_0_op0 = main_rotateexiti_168;
 	end
-	/* main: %normalize.exit.i*/
-	/*   %193 = fmul float %172, %a.0.i.i.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_512)) begin
-		main_altfp_multiply_32_0_op0 = main_rotateexiti_172_reg;
+	/* main: %rotate.exit.i*/
+	/*   %172 = fmul float %169, %169*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_455)) begin
+		main_altfp_multiply_32_0_op0 = main_rotateexiti_169;
+	end
+	/* main: %rotate.exit.i*/
+	/*   %171 = fmul float %170, 5.000000e-01*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_456)) begin
+		main_altfp_multiply_32_0_op0 = main_rotateexiti_170_reg;
+	end
+	/* main: %rotate.exit.i*/
+	/*   %174 = fmul float %171, %171*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_467)) begin
+		main_altfp_multiply_32_0_op0 = main_rotateexiti_171;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %195 = fmul float %166, %194*/
-	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_537)) begin
-		main_altfp_multiply_32_0_op0 = main_rotateexiti_166_reg;
+	/*   %196 = fmul float %175, %a.0.i.i.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_508)) begin
+		main_altfp_multiply_32_0_op0 = main_rotateexiti_175_reg;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %196 = fmul float %168, %194*/
-	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_538)) */ begin
-		main_altfp_multiply_32_0_op0 = main_rotateexiti_168_reg;
+	/*   %198 = fmul float %169, %197*/
+	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_533)) begin
+		main_altfp_multiply_32_0_op0 = main_rotateexiti_169_reg;
+	end
+	/* main: %normalize.exit.i*/
+	/*   %199 = fmul float %171, %197*/
+	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_534)) */ begin
+		main_altfp_multiply_32_0_op0 = main_rotateexiti_171_reg;
 	end
 end
 always @(*) begin
 	/* main: %1*/
-	/*   %3 = fmul float %.in1, %w_next.0.0*/
-	if ((cur_state == LEGUP_F_main_BB__1_4)) begin
-		main_altfp_multiply_32_0_op1 = main_1_w_next00_reg;
+	/*   %8 = fmul float %5, %7*/
+	if ((cur_state == LEGUP_F_main_BB__1_1)) begin
+		main_altfp_multiply_32_0_op1 = main_1_7_reg;
 	end
 	/* main: %1*/
-	/*   %5 = fmul float %.in, %w_next.1.0*/
-	else if ((cur_state == LEGUP_F_main_BB__1_5)) begin
-		main_altfp_multiply_32_0_op1 = main_1_w_next10_reg;
+	/*   %10 = fmul float %4, %6*/
+	else if ((cur_state == LEGUP_F_main_BB__1_2)) begin
+		main_altfp_multiply_32_0_op1 = main_1_6_reg;
 	end
-	/* main: %32*/
-	/*   %34 = fmul float %w_next.0.0, %33*/
-	else if ((cur_state == LEGUP_F_main_BB__32_160)) begin
-		main_altfp_multiply_32_0_op1 = main_32_33;
+	/* main: %.preheader2*/
+	/*   %36 = fmul float %7, %35*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_156)) begin
+		main_altfp_multiply_32_0_op1 = main_preheader2_35;
 	end
-	/* main: %32*/
-	/*   %37 = fmul float %w_next.1.0, %36*/
-	else if ((cur_state == LEGUP_F_main_BB__32_161)) begin
-		main_altfp_multiply_32_0_op1 = main_32_36_reg;
+	/* main: %.preheader2*/
+	/*   %39 = fmul float %6, %38*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_157)) begin
+		main_altfp_multiply_32_0_op1 = main_preheader2_38_reg;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %74 = fmul float %42, %a.0.i.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_226)) begin
+	/*   %76 = fmul float %44, %a.0.i.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_222)) begin
 		main_altfp_multiply_32_0_op1 = main_linear_tanhexitii_a0iii_reg;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %76 = fmul float %41, %75*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_251)) begin
-		main_altfp_multiply_32_0_op1 = main_linear_tanhexitii_75;
+	/*   %78 = fmul float %43, %77*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_247)) begin
+		main_altfp_multiply_32_0_op1 = main_linear_tanhexitii_77;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %119 = fmul float %80, %a.0.i12.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_307)) begin
+	/*   %121 = fmul float %82, %a.0.i12.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_303)) begin
 		main_altfp_multiply_32_0_op1 = main_linear_sech2exitii_a0i12ii_reg;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %157 = fmul float %125, %a.0.i.1.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_371)) begin
+	/*   %159 = fmul float %127, %a.0.i.1.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_367)) begin
 		main_altfp_multiply_32_0_op1 = main_linear_tanhexit1ii_a0i1ii_reg;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %159 = fmul float %124, %158*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_396)) begin
-		main_altfp_multiply_32_0_op1 = main_linear_tanhexit1ii_158;
+	/*   %161 = fmul float %126, %160*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_392)) begin
+		main_altfp_multiply_32_0_op1 = main_linear_tanhexit1ii_160;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %163 = fmul float %w_next.0.0, %121*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_423)) begin
-		main_altfp_multiply_32_0_op1 = main_linear_sech2exitii_121_reg;
+	/*   %166 = fmul float %7, %123*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_419)) begin
+		main_altfp_multiply_32_0_op1 = main_linear_sech2exitii_123_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %164 = fmul float %w_next.1.0, %121*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_424)) begin
-		main_altfp_multiply_32_0_op1 = main_linear_sech2exitii_121_reg;
+	/*   %167 = fmul float %6, %123*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_420)) begin
+		main_altfp_multiply_32_0_op1 = main_linear_sech2exitii_123_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %166 = fmul float %165, 5.000000e-01*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_448)) begin
+	/*   %169 = fmul float %168, 5.000000e-01*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_444)) begin
 		main_altfp_multiply_32_0_op1 = 32'h3F000000;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %169 = fmul float %166, %166*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_459)) begin
-		main_altfp_multiply_32_0_op1 = main_rotateexiti_166;
+	/*   %172 = fmul float %169, %169*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_455)) begin
+		main_altfp_multiply_32_0_op1 = main_rotateexiti_169;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %168 = fmul float %167, 5.000000e-01*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_460)) begin
+	/*   %171 = fmul float %170, 5.000000e-01*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_456)) begin
 		main_altfp_multiply_32_0_op1 = 32'h3F000000;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %171 = fmul float %168, %168*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_471)) begin
-		main_altfp_multiply_32_0_op1 = main_rotateexiti_168;
+	/*   %174 = fmul float %171, %171*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_467)) begin
+		main_altfp_multiply_32_0_op1 = main_rotateexiti_171;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %193 = fmul float %172, %a.0.i.i.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_512)) begin
+	/*   %196 = fmul float %175, %a.0.i.i.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_508)) begin
 		main_altfp_multiply_32_0_op1 = main_normalizeexiti_a0iiii_reg;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %195 = fmul float %166, %194*/
-	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_537)) begin
-		main_altfp_multiply_32_0_op1 = main_normalizeexiti_194;
+	/*   %198 = fmul float %169, %197*/
+	else if ((cur_state == LEGUP_F_main_BB_normalizeexiti_533)) begin
+		main_altfp_multiply_32_0_op1 = main_normalizeexiti_197;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %196 = fmul float %168, %194*/
-	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_538)) */ begin
-		main_altfp_multiply_32_0_op1 = main_normalizeexiti_194_reg;
+	/*   %199 = fmul float %171, %197*/
+	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_534)) */ begin
+		main_altfp_multiply_32_0_op1 = main_normalizeexiti_197_reg;
 	end
 end
 always @(*) begin
-	altfp_main_1_3_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_1_8_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	main_altfp_multiply_32_0 = altfp_multiplier_main_1_3_out;
+	main_altfp_multiply_32_0 = altfp_multiplier_main_1_8_out;
 end
 always @(*) begin
 	/* main: %1*/
-	/*   %4 = fadd float %3, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__1_15)) begin
-		main_altfp_add_32_0_op0 = main_1_3;
+	/*   %9 = fadd float %8, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__1_12)) begin
+		main_altfp_add_32_0_op0 = main_1_8;
 	end
 	/* main: %1*/
-	/*   %6 = fadd float %4, %5*/
-	else if ((cur_state == LEGUP_F_main_BB__1_29)) begin
-		main_altfp_add_32_0_op0 = main_1_4;
+	/*   %11 = fadd float %9, %10*/
+	else if ((cur_state == LEGUP_F_main_BB__1_26)) begin
+		main_altfp_add_32_0_op0 = main_1_9;
 	end
-	/* main: %10*/
-	/*   %12 = fadd float %11, -1.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__10_60)) begin
-		main_altfp_add_32_0_op0 = main_10_11_reg;
+	/* main: %15*/
+	/*   %17 = fadd float %16, -1.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB__15_57)) begin
+		main_altfp_add_32_0_op0 = main_15_16_reg;
 	end
-	/* main: %17*/
-	/*   %19 = fadd float %18, -1.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__17_92)) begin
-		main_altfp_add_32_0_op0 = main_17_18_reg;
+	/* main: %22*/
+	/*   %24 = fadd float %23, -1.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB__22_89)) begin
+		main_altfp_add_32_0_op0 = main_22_23_reg;
 	end
-	/* main: %23*/
-	/*   %25 = fadd float %24, -1.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__23_123)) begin
-		main_altfp_add_32_0_op0 = main_23_24_reg;
+	/* main: %28*/
+	/*   %30 = fadd float %29, -1.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB__28_120)) begin
+		main_altfp_add_32_0_op0 = main_28_29_reg;
 	end
-	/* main: %32*/
-	/*   %35 = fadd float %34, 0.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__32_171)) begin
-		main_altfp_add_32_0_op0 = main_32_34;
+	/* main: %.preheader2*/
+	/*   %37 = fadd float %36, 0.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_167)) begin
+		main_altfp_add_32_0_op0 = main_preheader2_36;
 	end
-	/* main: %32*/
-	/*   %38 = fadd float %35, %37*/
-	else if ((cur_state == LEGUP_F_main_BB__32_185)) begin
-		main_altfp_add_32_0_op0 = main_32_35;
-	end
-	/* main: %linear_tanh.exit.i.i*/
-	/*   %75 = fadd float %74, %b.0.i.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_237)) begin
-		main_altfp_add_32_0_op0 = main_linear_tanhexitii_74;
+	/* main: %.preheader2*/
+	/*   %40 = fadd float %37, %39*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_181)) begin
+		main_altfp_add_32_0_op0 = main_preheader2_37;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %77 = fadd float %40, %76*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_262)) begin
-		main_altfp_add_32_0_op0 = main_preheader15ii_40_reg;
+	/*   %77 = fadd float %76, %b.0.i.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_233)) begin
+		main_altfp_add_32_0_op0 = main_linear_tanhexitii_76;
+	end
+	/* main: %linear_tanh.exit.i.i*/
+	/*   %79 = fadd float %42, %78*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_258)) begin
+		main_altfp_add_32_0_op0 = main_preheader15ii_42_reg;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %120 = fadd float %119, %b.0.i13.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_318)) begin
-		main_altfp_add_32_0_op0 = main_linear_sech2exitii_119;
+	/*   %122 = fadd float %121, %b.0.i13.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_314)) begin
+		main_altfp_add_32_0_op0 = main_linear_sech2exitii_121;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %121 = fadd float %79, %120*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_332)) begin
-		main_altfp_add_32_0_op0 = main_preheader_79_reg;
+	/*   %123 = fadd float %81, %122*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_328)) begin
+		main_altfp_add_32_0_op0 = main_preheader_81_reg;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %158 = fadd float %157, %b.0.i.1.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_382)) begin
-		main_altfp_add_32_0_op0 = main_linear_tanhexit1ii_157;
+	/*   %160 = fadd float %159, %b.0.i.1.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_378)) begin
+		main_altfp_add_32_0_op0 = main_linear_tanhexit1ii_159;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %160 = fadd float %123, %159*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_407)) begin
-		main_altfp_add_32_0_op0 = main_preheader5_123_reg;
+	/*   %162 = fadd float %125, %161*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_403)) begin
+		main_altfp_add_32_0_op0 = main_preheader1_125_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %170 = fadd float %169, 0.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_470)) begin
-		main_altfp_add_32_0_op0 = main_rotateexiti_169;
+	/*   %173 = fadd float %172, 0.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_466)) begin
+		main_altfp_add_32_0_op0 = main_rotateexiti_172;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %172 = fadd float %170, %171*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_484)) begin
-		main_altfp_add_32_0_op0 = main_rotateexiti_170;
+	/*   %175 = fadd float %173, %174*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_480)) begin
+		main_altfp_add_32_0_op0 = main_rotateexiti_173;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %194 = fadd float %193, %b.0.i.i.i.i*/
-	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_523)) */ begin
-		main_altfp_add_32_0_op0 = main_normalizeexiti_193;
+	/*   %197 = fadd float %196, %b.0.i.i.i.i*/
+	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_519)) */ begin
+		main_altfp_add_32_0_op0 = main_normalizeexiti_196;
 	end
 end
 always @(*) begin
 	/* main: %1*/
-	/*   %4 = fadd float %3, 0.000000e+00*/
-	if ((cur_state == LEGUP_F_main_BB__1_15)) begin
+	/*   %9 = fadd float %8, 0.000000e+00*/
+	if ((cur_state == LEGUP_F_main_BB__1_12)) begin
 		main_altfp_add_32_0_op1 = 32'h0;
 	end
 	/* main: %1*/
-	/*   %6 = fadd float %4, %5*/
-	else if ((cur_state == LEGUP_F_main_BB__1_29)) begin
-		main_altfp_add_32_0_op1 = main_1_5_reg;
+	/*   %11 = fadd float %9, %10*/
+	else if ((cur_state == LEGUP_F_main_BB__1_26)) begin
+		main_altfp_add_32_0_op1 = main_1_10_reg;
 	end
-	/* main: %10*/
-	/*   %12 = fadd float %11, -1.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__10_60)) begin
+	/* main: %15*/
+	/*   %17 = fadd float %16, -1.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB__15_57)) begin
 		main_altfp_add_32_0_op1 = 32'hBF800000;
 	end
-	/* main: %17*/
-	/*   %19 = fadd float %18, -1.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__17_92)) begin
+	/* main: %22*/
+	/*   %24 = fadd float %23, -1.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB__22_89)) begin
 		main_altfp_add_32_0_op1 = 32'hBF800000;
 	end
-	/* main: %23*/
-	/*   %25 = fadd float %24, -1.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__23_123)) begin
+	/* main: %28*/
+	/*   %30 = fadd float %29, -1.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB__28_120)) begin
 		main_altfp_add_32_0_op1 = 32'hBF800000;
 	end
-	/* main: %32*/
-	/*   %35 = fadd float %34, 0.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB__32_171)) begin
+	/* main: %.preheader2*/
+	/*   %37 = fadd float %36, 0.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_167)) begin
 		main_altfp_add_32_0_op1 = 32'h0;
 	end
-	/* main: %32*/
-	/*   %38 = fadd float %35, %37*/
-	else if ((cur_state == LEGUP_F_main_BB__32_185)) begin
-		main_altfp_add_32_0_op1 = main_32_37_reg;
+	/* main: %.preheader2*/
+	/*   %40 = fadd float %37, %39*/
+	else if ((cur_state == LEGUP_F_main_BB_preheader2_181)) begin
+		main_altfp_add_32_0_op1 = main_preheader2_39_reg;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %75 = fadd float %74, %b.0.i.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_237)) begin
+	/*   %77 = fadd float %76, %b.0.i.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_233)) begin
 		main_altfp_add_32_0_op1 = main_linear_tanhexitii_b0iii_reg;
 	end
 	/* main: %linear_tanh.exit.i.i*/
-	/*   %77 = fadd float %40, %76*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_262)) begin
-		main_altfp_add_32_0_op1 = main_linear_tanhexitii_76;
+	/*   %79 = fadd float %42, %78*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexitii_258)) begin
+		main_altfp_add_32_0_op1 = main_linear_tanhexitii_78;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %120 = fadd float %119, %b.0.i13.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_318)) begin
+	/*   %122 = fadd float %121, %b.0.i13.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_314)) begin
 		main_altfp_add_32_0_op1 = main_linear_sech2exitii_b0i13ii_reg;
 	end
 	/* main: %linear_sech2.exit.i.i*/
-	/*   %121 = fadd float %79, %120*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_332)) begin
-		main_altfp_add_32_0_op1 = main_linear_sech2exitii_120;
+	/*   %123 = fadd float %81, %122*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_sech2exitii_328)) begin
+		main_altfp_add_32_0_op1 = main_linear_sech2exitii_122;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %158 = fadd float %157, %b.0.i.1.i.i*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_382)) begin
+	/*   %160 = fadd float %159, %b.0.i.1.i.i*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_378)) begin
 		main_altfp_add_32_0_op1 = main_linear_tanhexit1ii_b0i1ii_reg;
 	end
 	/* main: %linear_tanh.exit.1.i.i*/
-	/*   %160 = fadd float %123, %159*/
-	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_407)) begin
-		main_altfp_add_32_0_op1 = main_linear_tanhexit1ii_159;
+	/*   %162 = fadd float %125, %161*/
+	else if ((cur_state == LEGUP_F_main_BB_linear_tanhexit1ii_403)) begin
+		main_altfp_add_32_0_op1 = main_linear_tanhexit1ii_161;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %170 = fadd float %169, 0.000000e+00*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_470)) begin
+	/*   %173 = fadd float %172, 0.000000e+00*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_466)) begin
 		main_altfp_add_32_0_op1 = 32'h0;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %172 = fadd float %170, %171*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_484)) begin
-		main_altfp_add_32_0_op1 = main_rotateexiti_171_reg;
+	/*   %175 = fadd float %173, %174*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_480)) begin
+		main_altfp_add_32_0_op1 = main_rotateexiti_174_reg;
 	end
 	/* main: %normalize.exit.i*/
-	/*   %194 = fadd float %193, %b.0.i.i.i.i*/
-	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_523)) */ begin
+	/*   %197 = fadd float %196, %b.0.i.i.i.i*/
+	else /* if ((cur_state == LEGUP_F_main_BB_normalizeexiti_519)) */ begin
 		main_altfp_add_32_0_op1 = main_normalizeexiti_b0iiii_reg;
 	end
 end
 always @(*) begin
-	altfp_main_1_4_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_1_9_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	main_altfp_add_32_0 = altfp_adder_main_1_4_out;
+	main_altfp_add_32_0 = altfp_adder_main_1_9_out;
 end
 always @(*) begin
-	/* main: %8*/
-	/*   %9 = fsub float -0.000000e+00, %6*/
-	if ((cur_state == LEGUP_F_main_BB__8_45)) begin
+	/* main: %13*/
+	/*   %14 = fsub float -0.000000e+00, %11*/
+	if ((cur_state == LEGUP_F_main_BB__13_42)) begin
 		main_altfp_subtract_32_0_op0 = 32'h80000000;
 	end
-	/* main: %15*/
-	/*   %16 = fsub float -0.000000e+00, %6*/
-	else if ((cur_state == LEGUP_F_main_BB__15_77)) begin
+	/* main: %20*/
+	/*   %21 = fsub float -0.000000e+00, %11*/
+	else if ((cur_state == LEGUP_F_main_BB__20_74)) begin
 		main_altfp_subtract_32_0_op0 = 32'h80000000;
 	end
-	/* main: %21*/
-	/*   %22 = fsub float -0.000000e+00, %6*/
-	else if ((cur_state == LEGUP_F_main_BB__21_108)) begin
+	/* main: %26*/
+	/*   %27 = fsub float -0.000000e+00, %11*/
+	else if ((cur_state == LEGUP_F_main_BB__26_105)) begin
 		main_altfp_subtract_32_0_op0 = 32'h80000000;
 	end
-	/* main: %23*/
-	/*   %26 = fsub float -0.000000e+00, %25*/
-	else if ((cur_state == LEGUP_F_main_BB__23_137)) begin
+	/* main: %28*/
+	/*   %31 = fsub float -0.000000e+00, %30*/
+	else if ((cur_state == LEGUP_F_main_BB__28_134)) begin
 		main_altfp_subtract_32_0_op0 = 32'h80000000;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %165 = fsub float %77, %163*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_434)) begin
-		main_altfp_subtract_32_0_op0 = main_linear_tanhexitii_77_reg;
+	/*   %168 = fsub float %79, %166*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_430)) begin
+		main_altfp_subtract_32_0_op0 = main_linear_tanhexitii_79_reg;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %167 = fsub float %160, %164*/
-	else /* if ((cur_state == LEGUP_F_main_BB_rotateexiti_435)) */ begin
-		main_altfp_subtract_32_0_op0 = main_linear_tanhexit1ii_160_reg;
+	/*   %170 = fsub float %162, %167*/
+	else /* if ((cur_state == LEGUP_F_main_BB_rotateexiti_431)) */ begin
+		main_altfp_subtract_32_0_op0 = main_linear_tanhexit1ii_162_reg;
 	end
 end
 always @(*) begin
-	/* main: %8*/
-	/*   %9 = fsub float -0.000000e+00, %6*/
-	if ((cur_state == LEGUP_F_main_BB__8_45)) begin
-		main_altfp_subtract_32_0_op1 = main_1_6_reg;
+	/* main: %13*/
+	/*   %14 = fsub float -0.000000e+00, %11*/
+	if ((cur_state == LEGUP_F_main_BB__13_42)) begin
+		main_altfp_subtract_32_0_op1 = main_1_11_reg;
 	end
-	/* main: %15*/
-	/*   %16 = fsub float -0.000000e+00, %6*/
-	else if ((cur_state == LEGUP_F_main_BB__15_77)) begin
-		main_altfp_subtract_32_0_op1 = main_1_6_reg;
+	/* main: %20*/
+	/*   %21 = fsub float -0.000000e+00, %11*/
+	else if ((cur_state == LEGUP_F_main_BB__20_74)) begin
+		main_altfp_subtract_32_0_op1 = main_1_11_reg;
 	end
-	/* main: %21*/
-	/*   %22 = fsub float -0.000000e+00, %6*/
-	else if ((cur_state == LEGUP_F_main_BB__21_108)) begin
-		main_altfp_subtract_32_0_op1 = main_1_6_reg;
+	/* main: %26*/
+	/*   %27 = fsub float -0.000000e+00, %11*/
+	else if ((cur_state == LEGUP_F_main_BB__26_105)) begin
+		main_altfp_subtract_32_0_op1 = main_1_11_reg;
 	end
-	/* main: %23*/
-	/*   %26 = fsub float -0.000000e+00, %25*/
-	else if ((cur_state == LEGUP_F_main_BB__23_137)) begin
-		main_altfp_subtract_32_0_op1 = main_23_25;
-	end
-	/* main: %rotate.exit.i*/
-	/*   %165 = fsub float %77, %163*/
-	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_434)) begin
-		main_altfp_subtract_32_0_op1 = main_rotateexiti_163;
+	/* main: %28*/
+	/*   %31 = fsub float -0.000000e+00, %30*/
+	else if ((cur_state == LEGUP_F_main_BB__28_134)) begin
+		main_altfp_subtract_32_0_op1 = main_28_30;
 	end
 	/* main: %rotate.exit.i*/
-	/*   %167 = fsub float %160, %164*/
-	else /* if ((cur_state == LEGUP_F_main_BB_rotateexiti_435)) */ begin
-		main_altfp_subtract_32_0_op1 = main_rotateexiti_164;
+	/*   %168 = fsub float %79, %166*/
+	else if ((cur_state == LEGUP_F_main_BB_rotateexiti_430)) begin
+		main_altfp_subtract_32_0_op1 = main_rotateexiti_166;
+	end
+	/* main: %rotate.exit.i*/
+	/*   %170 = fsub float %162, %167*/
+	else /* if ((cur_state == LEGUP_F_main_BB_rotateexiti_431)) */ begin
+		main_altfp_subtract_32_0_op1 = main_rotateexiti_167;
 	end
 end
 always @(*) begin
-	altfp_main_8_9_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_13_14_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	main_altfp_subtract_32_0 = altfp_subtractor_main_8_9_out;
+	main_altfp_subtract_32_0 = altfp_subtractor_main_13_14_out;
 end
 always @(*) begin
 	/* main: %converged.exit.i*/
-	/*   %28 = fpext float %27 to double*/
-	if ((cur_state == LEGUP_F_main_BB_convergedexiti_152)) begin
-		main_altfp_extend_32_0_op0 = main_convergedexiti_27_reg;
+	/*   %33 = fpext float %32 to double*/
+	if ((cur_state == LEGUP_F_main_BB_convergedexiti_149)) begin
+		main_altfp_extend_32_0_op0 = main_convergedexiti_32_reg;
 	end
-	/* main: %88*/
-	/*   %89 = fpext float %80 to double*/
-	else /* if ((cur_state == LEGUP_F_main_BB__88_286)) */ begin
-		main_altfp_extend_32_0_op0 = main_preheader_80_reg;
+	/* main: %90*/
+	/*   %91 = fpext float %82 to double*/
+	else /* if ((cur_state == LEGUP_F_main_BB__90_282)) */ begin
+		main_altfp_extend_32_0_op0 = main_preheader_82_reg;
 	end
 end
 always @(*) begin
-	altfp_main_88_89_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_convergedexiti_33_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	main_altfp_extend_32_0 = altfp_extend_main_88_89_out;
+	main_altfp_extend_32_0 = altfp_extend_main_convergedexiti_33_out;
 end
 always @(*) begin
-	altfp_main_1_7_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_1_12_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_10_13_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_15_18_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_convergedexiti_29_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_convergedexiti_34_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_preheader15ii_43_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_preheader15ii_45_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_44_45_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_46_47_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_44_46_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_46_48_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_47_48_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_49_50_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_47_49_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_49_51_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_50_51_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_52_53_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_50_52_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_52_54_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_53_54_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_55_56_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_53_55_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_55_57_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_56_57_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_58_59_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_56_58_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_58_60_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_59_60_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_61_62_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_59_61_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_61_63_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_62_63_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_64_65_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_62_64_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_64_66_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_65_66_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_67_68_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_65_67_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_67_69_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_68_69_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_70_71_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_68_70_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_70_72_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_71_72_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_73_74_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_71_73_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_73_75_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_preheader_81_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_preheader_83_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_82_83_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_84_85_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_82_84_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_84_86_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_85_86_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_87_88_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_85_87_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_87_89_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_88_90_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_90_92_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_88_91_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_90_93_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_92_93_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_94_95_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_92_94_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_94_96_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_95_96_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_97_98_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_95_97_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_97_99_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_98_99_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_100_101_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_98_100_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_100_102_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_101_102_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_103_104_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_101_103_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_103_105_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_104_105_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_106_107_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_104_106_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_106_108_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_107_108_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_109_110_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_107_109_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_109_111_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_110_111_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_112_113_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_110_112_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_112_114_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_113_114_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_115_116_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_113_115_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_115_117_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_116_117_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_118_119_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_116_118_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_118_120_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_preheader5_126_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_preheader1_128_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_127_128_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_129_130_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_127_129_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_129_131_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_130_131_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_132_133_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_130_132_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_132_134_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_133_134_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_135_136_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_133_135_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_135_137_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_136_137_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_138_139_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_136_138_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_138_140_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_139_140_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_141_142_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_139_141_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_141_143_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_142_143_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_144_145_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_142_144_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_144_146_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_145_146_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_147_148_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_145_147_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_147_149_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_148_149_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_150_151_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_148_150_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_150_152_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_151_152_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_153_154_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_151_153_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_153_155_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_154_155_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_156_157_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_154_156_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_156_158_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_rotateexiti_173_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_rotateexiti_176_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
-	altfp_main_rotateexiti_174_en = (memory_controller_waitrequest == 1'd0);
-end
-always @(*) begin
-	altfp_main_175_176_en = (memory_controller_waitrequest == 1'd0);
-end
-always @(*) begin
-	altfp_main_175_177_en = (memory_controller_waitrequest == 1'd0);
+	altfp_main_rotateexiti_177_en = (memory_controller_waitrequest == 1'd0);
 end
 always @(*) begin
 	altfp_main_178_179_en = (memory_controller_waitrequest == 1'd0);
@@ -7653,6 +7488,12 @@ end
 always @(*) begin
 	altfp_main_190_192_en = (memory_controller_waitrequest == 1'd0);
 end
+always @(*) begin
+	altfp_main_193_194_en = (memory_controller_waitrequest == 1'd0);
+end
+always @(*) begin
+	altfp_main_193_195_en = (memory_controller_waitrequest == 1'd0);
+end
 always @(posedge clk) begin
 	if ((cur_state == LEGUP_0)) begin
 		finish <= 1'd0;
@@ -7660,7 +7501,7 @@ always @(posedge clk) begin
 	end
 	/* main: %fastica.exit*/
 	/*   ret i32 0*/
-	if ((cur_state == LEGUP_F_main_BB_fasticaexit_554)) begin
+	if ((cur_state == LEGUP_F_main_BB_fasticaexit_546)) begin
 		finish <= (memory_controller_waitrequest == 1'd0);
 		if (start == 1'b0 && ^((memory_controller_waitrequest == 1'd0)) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to finish"); $finish; end
 	end
@@ -7670,39 +7511,24 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_enable_a = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
+	/* main: %.preheader2*/
+	/*   %35 = load float* %scevgep1, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
 		memory_controller_enable_a = 1'd1;
 	end
-	/* main: %30*/
-	/*   store float %w_next.0.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_enable_a = 1'd1;
-	end
-	/* main: %32*/
-	/*   %33 = load float* %scevgep1, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		memory_controller_enable_a = 1'd1;
-	end
-	/* main: %32*/
-	/*   store float %38, float* %scevgep2, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_199)) begin
+	/* main: %.preheader2*/
+	/*   store float %40, float* %scevgep2, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_195)) begin
 		memory_controller_enable_a = 1'd1;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %41 = load float* %scevgep5, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %43 = load float* %scevgep5, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_enable_a = 1'd1;
 	end
-	/* main: %.preheader5*/
-	/*   %124 = load float* %scevgep8, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_enable_a = 1'd1;
-	end
-	/* main: %198*/
-	/*   %.pre9 = load i32* bitcast ([2 x float]* @w to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
+	/* main: %.preheader1*/
+	/*   %126 = load float* %scevgep8, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
 		memory_controller_enable_a = 1'd1;
 	end
 end
@@ -7711,40 +7537,25 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_address_a = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
-		memory_controller_address_a = `TAG_g_w_a;
+	/* main: %.preheader2*/
+	/*   %35 = load float* %scevgep1, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
+		memory_controller_address_a = main_preheader2_scevgep1;
 	end
-	/* main: %30*/
-	/*   store float %w_next.0.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_address_a = `TAG_g_w_a;
-	end
-	/* main: %32*/
-	/*   %33 = load float* %scevgep1, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		memory_controller_address_a = main_32_scevgep1;
-	end
-	/* main: %32*/
-	/*   store float %38, float* %scevgep2, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_199)) begin
-		memory_controller_address_a = main_32_scevgep2_reg;
+	/* main: %.preheader2*/
+	/*   store float %40, float* %scevgep2, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_195)) begin
+		memory_controller_address_a = main_preheader2_scevgep2_reg;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %41 = load float* %scevgep5, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %43 = load float* %scevgep5, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_address_a = main_preheader15ii_scevgep5;
 	end
-	/* main: %.preheader5*/
-	/*   %124 = load float* %scevgep8, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_address_a = main_preheader5_scevgep8;
-	end
-	/* main: %198*/
-	/*   %.pre9 = load i32* bitcast ([2 x float]* @w to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
-		memory_controller_address_a = `TAG_g_w_a;
+	/* main: %.preheader1*/
+	/*   %126 = load float* %scevgep8, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
+		memory_controller_address_a = main_preheader1_scevgep8;
 	end
 end
 always @(*) begin
@@ -7752,39 +7563,24 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_write_enable_a = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
+	/* main: %.preheader2*/
+	/*   %35 = load float* %scevgep1, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
 		memory_controller_write_enable_a = 1'd0;
 	end
-	/* main: %30*/
-	/*   store float %w_next.0.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_write_enable_a = 1'd1;
-	end
-	/* main: %32*/
-	/*   %33 = load float* %scevgep1, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		memory_controller_write_enable_a = 1'd0;
-	end
-	/* main: %32*/
-	/*   store float %38, float* %scevgep2, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_199)) begin
+	/* main: %.preheader2*/
+	/*   store float %40, float* %scevgep2, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_195)) begin
 		memory_controller_write_enable_a = 1'd1;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %41 = load float* %scevgep5, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %43 = load float* %scevgep5, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_write_enable_a = 1'd0;
 	end
-	/* main: %.preheader5*/
-	/*   %124 = load float* %scevgep8, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_write_enable_a = 1'd0;
-	end
-	/* main: %198*/
-	/*   %.pre9 = load i32* bitcast ([2 x float]* @w to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
+	/* main: %.preheader1*/
+	/*   %126 = load float* %scevgep8, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
 		memory_controller_write_enable_a = 1'd0;
 	end
 end
@@ -7793,15 +7589,10 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_in_a = 1'd0;
 	end
-	/* main: %30*/
-	/*   store float %w_next.0.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_in_a = main_1_w_next00_reg;
-	end
-	/* main: %32*/
-	/*   store float %38, float* %scevgep2, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_199)) begin
-		memory_controller_in_a = main_32_38;
+	/* main: %.preheader2*/
+	/*   store float %40, float* %scevgep2, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_195)) begin
+		memory_controller_in_a = main_preheader2_40;
 	end
 end
 always @(*) begin
@@ -7809,39 +7600,24 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_size_a = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
+	/* main: %.preheader2*/
+	/*   %35 = load float* %scevgep1, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
 		memory_controller_size_a = 2'd2;
 	end
-	/* main: %30*/
-	/*   store float %w_next.0.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 0), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_size_a = 2'd2;
-	end
-	/* main: %32*/
-	/*   %33 = load float* %scevgep1, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		memory_controller_size_a = 2'd2;
-	end
-	/* main: %32*/
-	/*   store float %38, float* %scevgep2, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_199)) begin
+	/* main: %.preheader2*/
+	/*   store float %40, float* %scevgep2, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_195)) begin
 		memory_controller_size_a = 2'd2;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %41 = load float* %scevgep5, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %43 = load float* %scevgep5, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_size_a = 2'd2;
 	end
-	/* main: %.preheader5*/
-	/*   %124 = load float* %scevgep8, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_size_a = 2'd2;
-	end
-	/* main: %198*/
-	/*   %.pre9 = load i32* bitcast ([2 x float]* @w to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
+	/* main: %.preheader1*/
+	/*   %126 = load float* %scevgep8, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
 		memory_controller_size_a = 2'd2;
 	end
 end
@@ -7850,39 +7626,24 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_enable_b = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre8 = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
-		memory_controller_enable_b = 1'd1;
-	end
-	/* main: %30*/
-	/*   store float %w_next.1.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_enable_b = 1'd1;
-	end
-	/* main: %32*/
-	/*   %36 = load float* %scevgep, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
+	/* main: %.preheader2*/
+	/*   %38 = load float* %scevgep, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
 		memory_controller_enable_b = 1'd1;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %42 = load float* %scevgep4, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %44 = load float* %scevgep4, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_enable_b = 1'd1;
 	end
 	/* main: %.preheader*/
-	/*   %80 = load float* %scevgep10, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader_278)) begin
+	/*   %82 = load float* %scevgep10, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader_274)) begin
 		memory_controller_enable_b = 1'd1;
 	end
-	/* main: %.preheader5*/
-	/*   %125 = load float* %scevgep7, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_enable_b = 1'd1;
-	end
-	/* main: %198*/
-	/*   %.pre10 = load i32* bitcast (float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1) to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
+	/* main: %.preheader1*/
+	/*   %127 = load float* %scevgep7, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
 		memory_controller_enable_b = 1'd1;
 	end
 end
@@ -7891,40 +7652,25 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_address_b = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre8 = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
-		memory_controller_address_b = (`TAG_g_w_a + (4 * 32'd1));
-	end
-	/* main: %30*/
-	/*   store float %w_next.1.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_address_b = (`TAG_g_w_a + (4 * 32'd1));
-	end
-	/* main: %32*/
-	/*   %36 = load float* %scevgep, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
-		memory_controller_address_b = main_32_scevgep;
+	/* main: %.preheader2*/
+	/*   %38 = load float* %scevgep, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
+		memory_controller_address_b = main_preheader2_scevgep;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %42 = load float* %scevgep4, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %44 = load float* %scevgep4, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_address_b = main_preheader15ii_scevgep4;
 	end
 	/* main: %.preheader*/
-	/*   %80 = load float* %scevgep10, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader_278)) begin
+	/*   %82 = load float* %scevgep10, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader_274)) begin
 		memory_controller_address_b = main_preheader_scevgep10;
 	end
-	/* main: %.preheader5*/
-	/*   %125 = load float* %scevgep7, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_address_b = main_preheader5_scevgep7;
-	end
-	/* main: %198*/
-	/*   %.pre10 = load i32* bitcast (float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1) to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
-		memory_controller_address_b = (`TAG_g_w_a + (4 * 32'd1));
+	/* main: %.preheader1*/
+	/*   %127 = load float* %scevgep7, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
+		memory_controller_address_b = main_preheader1_scevgep7;
 	end
 end
 always @(*) begin
@@ -7932,39 +7678,24 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_write_enable_b = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre8 = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
-		memory_controller_write_enable_b = 1'd0;
-	end
-	/* main: %30*/
-	/*   store float %w_next.1.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_write_enable_b = 1'd1;
-	end
-	/* main: %32*/
-	/*   %36 = load float* %scevgep, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
+	/* main: %.preheader2*/
+	/*   %38 = load float* %scevgep, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
 		memory_controller_write_enable_b = 1'd0;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %42 = load float* %scevgep4, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %44 = load float* %scevgep4, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_write_enable_b = 1'd0;
 	end
 	/* main: %.preheader*/
-	/*   %80 = load float* %scevgep10, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader_278)) begin
+	/*   %82 = load float* %scevgep10, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader_274)) begin
 		memory_controller_write_enable_b = 1'd0;
 	end
-	/* main: %.preheader5*/
-	/*   %125 = load float* %scevgep7, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_write_enable_b = 1'd0;
-	end
-	/* main: %198*/
-	/*   %.pre10 = load i32* bitcast (float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1) to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
+	/* main: %.preheader1*/
+	/*   %127 = load float* %scevgep7, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
 		memory_controller_write_enable_b = 1'd0;
 	end
 end
@@ -7973,50 +7704,30 @@ always @(*) begin
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_in_b = 1'd0;
 	end
-	/* main: %30*/
-	/*   store float %w_next.1.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_in_b = main_1_w_next10_reg;
-	end
 end
 always @(*) begin
 	memory_controller_size_b = 1'd0;
 	if ((cur_state == LEGUP_0)) begin
 		memory_controller_size_b = 1'd0;
 	end
-	/* main: %0*/
-	/*   %.pre8 = load float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__0_1)) begin
-		memory_controller_size_b = 2'd2;
-	end
-	/* main: %30*/
-	/*   store float %w_next.1.0, float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1), align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__30_156)) begin
-		memory_controller_size_b = 2'd2;
-	end
-	/* main: %32*/
-	/*   %36 = load float* %scevgep, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB__32_158)) begin
+	/* main: %.preheader2*/
+	/*   %38 = load float* %scevgep, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader2_154)) begin
 		memory_controller_size_b = 2'd2;
 	end
 	/* main: %.preheader15.i.i*/
-	/*   %42 = load float* %scevgep4, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader15ii_202)) begin
+	/*   %44 = load float* %scevgep4, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader15ii_198)) begin
 		memory_controller_size_b = 2'd2;
 	end
 	/* main: %.preheader*/
-	/*   %80 = load float* %scevgep10, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader_278)) begin
+	/*   %82 = load float* %scevgep10, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader_274)) begin
 		memory_controller_size_b = 2'd2;
 	end
-	/* main: %.preheader5*/
-	/*   %125 = load float* %scevgep7, align 4, !tbaa !1*/
-	if ((cur_state == LEGUP_F_main_BB_preheader5_347)) begin
-		memory_controller_size_b = 2'd2;
-	end
-	/* main: %198*/
-	/*   %.pre10 = load i32* bitcast (float* getelementptr inbounds ([2 x float]* @w, i32 0, i32 1) to i32*), align 4, !tbaa !5*/
-	if ((cur_state == LEGUP_F_main_BB__198_550)) begin
+	/* main: %.preheader1*/
+	/*   %127 = load float* %scevgep7, align 4, !tbaa !1*/
+	if ((cur_state == LEGUP_F_main_BB_preheader1_343)) begin
 		memory_controller_size_b = 2'd2;
 	end
 end
@@ -8027,7 +7738,7 @@ always @(posedge clk) begin
 	end
 	/* main: %fastica.exit*/
 	/*   ret i32 0*/
-	if ((cur_state == LEGUP_F_main_BB_fasticaexit_554)) begin
+	if ((cur_state == LEGUP_F_main_BB_fasticaexit_546)) begin
 		return_val <= 32'd0;
 		if (start == 1'b0 && ^(32'd0) === 1'bX) begin $display ("ERROR: Right hand side is 'X'. Assigned to return_val"); $finish; end
 	end
