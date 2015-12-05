@@ -152,7 +152,6 @@ void normalize() {
 	float w_rnorm = rnorm();
 	for (i = 0; i < N; i++) {
 		w_next[i] *= w_rnorm;
-		printf("w_next: %f\n",w_next[i]);
 	}
 }
 
@@ -186,5 +185,5 @@ int main() {
 
 	/* find unmixing vector */ 
 	fastica();
-	printf("The unmixing vector is : [%f %f]\n",w[0],w[1]);//DBL2HEX(w[0]),DBL2HEX(w[1]));
+	printf("The unmixing vector is : [%f %f]\n",DBL2HEX(w[0]),DBL2HEX(w[1]));//DBL2HEX(w[0]),DBL2HEX(w[1]));
 }
