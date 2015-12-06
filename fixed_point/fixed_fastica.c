@@ -3,23 +3,31 @@
 #include <stdint.h>
 #include "fixed_fastica.h"
 
+#define MAX_NEGATIVE_Q6_10 -32768
+#define MAX_NEGATIVE_Q11_21 -2147483648
+#define MAX_POSITIVE_Q11_21 2147483647
+#define MAX_POSITIVE_Q21_43 9223372036854775807
+
 Q21_43 sum_2;
 Q11_21 w_rnorm;
 Q11_21 dot_product;
 
 Q11_21 multiply_Q6_10_by_Q6_10(Q6_10 a, Q6_10 b) {
-	if ((a == b) && (a == -32768)) { return 2147483647; }
+	if ((a == b) && (a == MAX_NEGATIVE_Q6_10)) { return MAX_POSITIVE_Q11_21; }
 	Q11_21 cc = (Q11_21)a * (Q11_21)b * 2;
 
 	return cc;
 }
 
 Q21_43 multiply_Q11_21_by_Q11_21(Q11_21 a, Q11_21 b) {
-	if ((a == b) && (a == -2147483648)) { return 9223372036854775807; }
+	if ((a == b) && (a == MAX_NEGATIVE_Q11_21)) { return MAX_POSITIVE_Q21_43; }
 	Q21_43 cc = (Q21_43)a * (Q21_43)b * 2;
 
 	return cc;
 }
+
+// #define multiply_Q6_10_by_Q6_10(a, b) ( (a == b) && (a == MAX_NEGATIVE_Q6_10) ? MAX_POSITIVE_Q11_21 : (Q11_21)a * (Q11_21)b * 2 )
+// #define multiply_Q11_21_by_Q11_21(a, b) ( (a == b) && (a == MAX_NEGATIVE_Q11_21) ? MAX_POSITIVE_Q21_43 : (Q21_43)a * (Q21_43)b * 2 )
 
 /* reciprocal square root (piecewise linear approximation) */
 Q11_21 rsqrt(Q21_43 input) {
