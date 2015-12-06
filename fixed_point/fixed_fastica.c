@@ -150,7 +150,7 @@ void rotate() {
 	}
 
 	for (n = 0; n < N; n++) {
-		w_next_Q11_21[n] = (product_2[n] - product_3[n]) / N;
+		w_next_Q11_21[n] = (product_2[n] - product_3[n]) >> 1;/// N;
 		w_next_Q6_10[n] = (Q6_10)(w_next_Q11_21[n] >> 11);
 	}
 }
