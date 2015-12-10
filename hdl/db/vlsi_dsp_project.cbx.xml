@@ -1,0 +1,14 @@
+<?xml version="1.0" ?>
+<LOG_ROOT>
+	<PROJECT NAME="vlsi_dsp_project">
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult3" CBX_FILE_NAME="mac_mult_58h1.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult7" CBX_FILE_NAME="mac_mult_ubh1.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0" CBX_FILE_NAME="mult_s9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out2" CBX_FILE_NAME="mac_out_sv82.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out4" CBX_FILE_NAME="mac_out_kv82.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out6" CBX_FILE_NAME="mac_out_iv82.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out8" CBX_FILE_NAME="mac_out_tv82.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult1" CBX_FILE_NAME="mac_mult_33h1.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult5" CBX_FILE_NAME="mac_mult_j6h1.tdf"/>
+	</PROJECT>
+</LOG_ROOT>

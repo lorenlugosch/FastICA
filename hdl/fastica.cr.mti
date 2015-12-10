@@ -1,0 +1,49 @@
+Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity fastica
+-- Compiling architecture arch of fastica
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity fastica_tb
+-- Compiling architecture arch of fastica_tb
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity rsqrt
+-- Compiling architecture arch of rsqrt
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Compiling package parameters
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity reduction_sum_Q11_21
+-- Compiling architecture arch of reduction_sum_Q11_21
+
+} {} {}}

@@ -1,0 +1,26 @@
+-- Loren Lugosch
+-- ECSE 682 Project
+-- 
+-- reduction_sum_Q11_21.vhd
+
+LIBRARY ieee;
+USE ieee.std_logic_1164.all;
+USE ieee.numeric_std.all;
+USE work.parameters.all;
+
+ENTITY reduction_sum_Q11_21 IS
+	PORT(
+		summands : IN Q11_21_array_T;
+		sum : OUT SIGNED(Q11_21.data_width-1 DOWNTO 0);
+	);
+END ENTITY;
+
+ARCHITECTURE arch OF reduction_sum_Q11_21 IS
+
+BEGIN
+
+	FOR t IN 0 TO T-1 LOOP
+		sum <= sum + summands(t);
+	END LOOP; 
+
+END arch;

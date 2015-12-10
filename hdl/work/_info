@@ -1,0 +1,259 @@
+m255
+K3
+13
+cModel Technology
+dC:\altera\13.1
+Efastica
+Z0 w1449727682
+Z1 DPx4 work 10 parameters 0 22 Yh0iI2e8o8]S7B:NHMlTK1
+Z2 DPx4 ieee 11 numeric_std 0 22 O3PF8EB`?j9=z7KT`fn941
+Z3 DPx3 std 6 textio 0 22 5>J:;AW>W0[[dW0I6EN1Q0
+Z4 DPx4 ieee 14 std_logic_1164 0 22 5=aWaoGZSMWIcH0i^f`XF1
+Z5 dY:\_grad_school\_Fall2015\vlsi_dsp\project\hdl
+Z6 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+Z7 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+l0
+L11
+VXJh:o3FVGKN_Jk?hO^lZ83
+Z8 OV;C;10.1d;51
+32
+Z9 !s108 1449765859.404000
+Z10 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
+Z11 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
+Z12 o-work work -2002 -explicit -O0
+Z13 tExplicit 1
+!s100 dcAJ9SCM2@7P5fY]i3aUi2
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 7 fastica 0 22 XJh:o3FVGKN_Jk?hO^lZ83
+l45
+L22
+VmfSaedBd3?mR0bYV]6CI40
+R8
+32
+R9
+R10
+R11
+R12
+R13
+!s100 dSAS5a=@7P`_S?gSiN2460
+!i10b 1
+Efastica_tb
+Z14 w1449765305
+R1
+R2
+R3
+R4
+R5
+Z15 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+Z16 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+l0
+L11
+VJUaAQLIKX0cAOS1Ld>_oR1
+R8
+32
+Z17 !s108 1449765859.612000
+Z18 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd|
+Z19 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd|
+R12
+R13
+!s100 IfCRTFoNz6o>1NBYK20Pz1
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 10 fastica_tb 0 22 JUaAQLIKX0cAOS1Ld>_oR1
+l23
+L14
+VaWzMJ[lPG9EiWS0m3<3:72
+R8
+32
+R17
+R18
+R19
+R12
+R13
+!s100 VC0gRkDQ<BllzRZNcEn?`3
+!i10b 1
+Pparameters
+R2
+R3
+R4
+w1449765355
+R5
+8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+l0
+L12
+VYh0iI2e8o8]S7B:NHMlTK1
+R8
+32
+R12
+R13
+!s100 bZS04]AZ=LYCeVTR>nD]B1
+!i10b 1
+!s108 1449765859.901000
+!s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd|
+!s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd|
+Ereduction_sum_q11_21
+Z20 w1449706635
+R1
+R2
+R3
+R4
+R5
+Z21 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
+Z22 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
+l0
+L11
+VVjY9jC4l6nWdWX55j@Y^V0
+R8
+32
+Z23 !s108 1449765860.077000
+Z24 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd|
+Z25 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd|
+R12
+R13
+!s100 B5ILQ5kmK=ZNEU6F;do`73
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 20 reduction_sum_q11_21 0 22 VjY9jC4l6nWdWX55j@Y^V0
+l22
+L18
+V62Nm@V157;R2Ho<n2Z9lL0
+R8
+32
+R23
+R24
+R25
+R12
+R13
+!s100 H?lLN6eU_XY[=3^PAa?=i2
+!i10b 1
+Ersqrt
+Z26 w1449727860
+R1
+R2
+R3
+R4
+R5
+Z27 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
+Z28 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
+l0
+L11
+V7]LzPdR_=lGh@8a7X?RBN2
+R8
+32
+Z29 !s108 1449765860.282000
+Z30 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd|
+Z31 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd|
+R12
+R13
+!s100 e<TW2PaKG[8o`^aB2Bh^K0
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 5 rsqrt 0 22 7]LzPdR_=lGh@8a7X?RBN2
+l22
+L20
+VU>1HKj?VV_AHBaVT_NRHi2
+R8
+32
+R29
+R30
+R31
+R12
+R13
+!s100 Cn=BjLR0KDT57<@^3W;YG2
+!i10b 1
+Esech2
+Z32 w1449727862
+R1
+R2
+R3
+R4
+R5
+Z33 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
+Z34 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
+l0
+L11
+V5OaT?UK`;Me_U<4zmUmKU2
+R8
+32
+Z35 !s108 1449765860.487000
+Z36 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd|
+Z37 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd|
+R12
+R13
+!s100 6Ej3d]EYneb>XRWdSz;F]2
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 5 sech2 0 22 5OaT?UK`;Me_U<4zmUmKU2
+l22
+L20
+V;B`J^1NZIoP?9JVDIIRT@3
+R8
+32
+R35
+R36
+R37
+R12
+R13
+!s100 0;`mTSD7Z;9G0RlDEbf[@0
+!i10b 1
+Etanh
+Z38 w1449770555
+R1
+R2
+R3
+R4
+R5
+Z39 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
+Z40 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
+l0
+L11
+VhDS>KQTE8_eg0Z=M78gnO1
+!s100 n`=0A`?h0[[<7`]S;j=Yf2
+R8
+32
+!i10b 1
+Z41 !s108 1449770559.458000
+Z42 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd|
+Z43 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd|
+R12
+R13
+Aarch
+R1
+R2
+R3
+R4
+Z44 DEx4 work 4 tanh 0 22 hDS>KQTE8_eg0Z=M78gnO1
+l26
+L20
+VlDL<LI;g^1c9M>iGXjTca0
+!s100 PLMZS3b45PPaQK8eme`lo3
+R8
+32
+!i10b 1
+R41
+R42
+R43
+R12
+R13

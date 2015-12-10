@@ -1,0 +1,5 @@
+v1
+DSP_BALANCING_IMPLEMENTATION,LOGIC_ELEMENTS,lpm_mult:Mult0|mult_s9t:auto_generated|mac_out2,
+DSP_BALANCING_IMPLEMENTATION,LOGIC_ELEMENTS,lpm_mult:Mult0|mult_s9t:auto_generated|mac_out4,
+DSP_BALANCING_IMPLEMENTATION,LOGIC_ELEMENTS,lpm_mult:Mult0|mult_s9t:auto_generated|mac_out6,
+DSP_BALANCING_IMPLEMENTATION,LOGIC_ELEMENTS,lpm_mult:Mult0|mult_s9t:auto_generated|mac_out8,
