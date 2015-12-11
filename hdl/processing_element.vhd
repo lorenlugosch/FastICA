@@ -10,8 +10,8 @@ USE work.parameters.all;
 
 ENTITY processing_element IS
 	PORT(
-		--clock : IN STD_LOGIC;
-		--reset : IN STD_LOGIC;
+		clock : IN STD_LOGIC;
+		reset : IN STD_LOGIC;
 		ws : IN Q6_10_array_N;
 		w_Q6_10 : IN Q6_10_array_N;
 		sum_1_in : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
@@ -62,5 +62,6 @@ BEGIN
 
 	p2_out(0) <= tpws(0) + p2_in(0);
 	p2_out(1) <= tpws(1) + p2_in(1);
+
 
 END arch;

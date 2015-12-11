@@ -50,10 +50,36 @@ PACKAGE parameters IS
 		PORT(
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;
+			start : IN STD_LOGIC;
 			ws0 : IN Q6_10_array_T;
 			ws1 : IN Q6_10_array_T;
 			w : OUT Q6_10_array_N;
 			done : OUT STD_LOGIC
+		);
+	END COMPONENT;
+
+	COMPONENT fastica IS
+		PORT(
+			clock : IN STD_LOGIC;
+			reset : IN STD_LOGIC;
+			start : IN STD_LOGIC;
+			ws : IN Q6_10_array_N;
+			w : OUT Q6_10_array_N;
+			done : OUT STD_LOGIC
+		);
+	END COMPONENT;
+
+	COMPONENT RAM IS
+		GENERIC (
+			params : fixed_point := Q6_10;
+			size : INTEGER := T
+		);
+		PORT (
+			clock : IN std_logic;
+			address : IN INTEGER RANGE 0 TO size - 1;
+			datain : IN SIGNED((N*params.data_width)-1 DOWNTO 0);
+			we : IN std_logic;
+			dataout : OUT SIGNED((N*params.data_width)-1 DOWNTO 0)
 		);
 	END COMPONENT;
 
@@ -88,6 +114,56 @@ PACKAGE parameters IS
 		PORT(
 			summands : IN Q11_21_array_T;
 			sum : OUT SIGNED(Q11_21.data_width-1 DOWNTO 0)
+		);
+	END COMPONENT;
+
+	COMPONENT controller IS
+		PORT (
+			clock : IN STD_LOGIC;
+			reset : IN STD_LOGIC;
+			converged : IN STD_LOGIC;
+			start : IN STD_LOGIC;
+			ws_select : OUT STD_LOGIC; -- 0 - external, 1 - from RAM
+			RAM_address : OUT INTEGER RANGE 0 TO T - 1;
+			valid_w : OUT STD_LOGIC;
+			valid_p1 : OUT STD_LOGIC;
+			RAM_we : OUT STD_LOGIC;
+			rotation_start : OUT STD_LOGIC
+		);
+	END COMPONENT;
+
+	COMPONENT processing_element IS
+		PORT(
+			clock : IN STD_LOGIC;
+			reset : IN STD_LOGIC;
+			ws : IN Q6_10_array_N;
+			w_Q6_10 : IN Q6_10_array_N;
+			sum_1_in : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
+			sum_1_out : OUT SIGNED(Q11_21.data_width-1 DOWNTO 0);
+			p2_in : IN Q11_21_array_N;
+			p2_out : OUT Q11_21_array_N
+		);
+	END COMPONENT;
+
+	COMPONENT normalization_unit IS
+		PORT(
+			clock : IN STD_LOGIC;
+			reset : IN STD_LOGIC;
+			w_Q6_10 : IN Q6_10_array_N;
+			sum_1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
+			p2 : IN Q11_21_array_N;
+			w_next_Q6_10 : OUT Q6_10_array_N
+		);
+	END COMPONENT;
+
+	COMPONENT convergence_check IS
+		PORT(
+			clock : IN STD_LOGIC;
+			reset : IN STD_LOGIC;
+			w_Q6_10 : IN Q6_10_array_N;
+			w_next_Q6_10_in : IN Q6_10_array_N;
+			w_next_Q6_10_out : OUT Q6_10_array_N;
+			converged : OUT STD_LOGIC
 		);
 	END COMPONENT;
 

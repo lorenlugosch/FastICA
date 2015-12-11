@@ -1,14 +1,21 @@
 <?xml version="1.0" ?>
 <LOG_ROOT>
 	<PROJECT NAME="vlsi_dsp_project">
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult3" CBX_FILE_NAME="mac_mult_58h1.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult7" CBX_FILE_NAME="mac_mult_ubh1.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0" CBX_FILE_NAME="mult_s9t.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out2" CBX_FILE_NAME="mac_out_sv82.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out4" CBX_FILE_NAME="mac_out_kv82.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out6" CBX_FILE_NAME="mac_out_iv82.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_out:mac_out8" CBX_FILE_NAME="mac_out_tv82.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult1" CBX_FILE_NAME="mac_mult_33h1.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|tanh|lpm_mult:Mult0|mult_s9t:auto_generated|alt_mac_mult:mac_mult5" CBX_FILE_NAME="mac_mult_j6h1.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult0" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult4" CBX_FILE_NAME="mult_v9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|lpm_mult:Mult2" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|convergence_check:CC|lpm_mult:Mult0" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult1" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult5" CBX_FILE_NAME="mult_v9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0" CBX_FILE_NAME="mult_4at.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|lpm_mult:Mult3" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|sech2:sech2_t|lpm_mult:Mult0" CBX_FILE_NAME="mult_s9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|tanh:tanh_t|lpm_mult:Mult0" CBX_FILE_NAME="mult_s9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|RAM:ws_ram|altsyncram:ram_rtl_0" CBX_FILE_NAME="altsyncram_hh41.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|convergence_check:CC|lpm_mult:Mult1" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult2" CBX_FILE_NAME="mult_q9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|lpm_mult:Mult0" CBX_FILE_NAME="mult_t9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult3" CBX_FILE_NAME="mult_q9t.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|lpm_mult:Mult1" CBX_FILE_NAME="mult_t9t.tdf"/>
 	</PROJECT>
 </LOG_ROOT>

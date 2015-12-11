@@ -18,6 +18,9 @@ ARCHITECTURE arch OF fastica_tb IS
 	CONSTANT clk_period : TIME := 1 ns;
 	SIGNAL w : Q6_10_array_N;
 	SIGNAL done : STD_LOGIC;
+	SIGNAL start : STD_LOGIC;
+	SIGNAL ws : Q6_10_array_N;
+	--SIGNAL ws1 : SIGNED(Q6_10.data_width-1 DOWNTO 0);
 
 
 BEGIN	
@@ -27,10 +30,10 @@ BEGIN
 		PORT MAP(
 			clock => clock,
 			reset => reset,
-			ws0 => test_signal_0,
-			ws1 => test_signal_1,
 			w => w,
-			done => done
+			done => done,
+			start => start,
+			ws => ws
 		);
 
 	clock_process: 
@@ -50,6 +53,16 @@ BEGIN
 		WAIT FOR clk_period / 2;
 		reset <= '0';
 		WAIT FOR clk_period / 2;
+
+		WAIT FOR clk_period;
+		WAIT FOR clk_period / 2;
+
+		start <= '1';
+		FOR t IN 0 TO T-1 LOOP
+			ws(0) <= test_signal_0(t);
+			ws(1) <= test_signal_1(t);
+			WAIT FOR clk_period;
+		END LOOP;
 
 		-- wait forever
 		WAIT;

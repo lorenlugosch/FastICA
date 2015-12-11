@@ -3,36 +3,36 @@ K3
 13
 cModel Technology
 dC:\altera\13.1
-Efastica
-Z0 w1449727682
-Z1 DPx4 work 10 parameters 0 22 Yh0iI2e8o8]S7B:NHMlTK1
+Econtroller
+Z0 w1449872181
+Z1 DPx4 work 10 parameters 0 22 9^^FRJhUjFVz?UdJ_oMYk3
 Z2 DPx4 ieee 11 numeric_std 0 22 O3PF8EB`?j9=z7KT`fn941
 Z3 DPx3 std 6 textio 0 22 5>J:;AW>W0[[dW0I6EN1Q0
 Z4 DPx4 ieee 14 std_logic_1164 0 22 5=aWaoGZSMWIcH0i^f`XF1
 Z5 dY:\_grad_school\_Fall2015\vlsi_dsp\project\hdl
-Z6 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
-Z7 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+Z6 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd
+Z7 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd
 l0
 L11
-VXJh:o3FVGKN_Jk?hO^lZ83
+VELMkAKAmBBX@PN:J>S<D[0
 Z8 OV;C;10.1d;51
 32
-Z9 !s108 1449765859.404000
-Z10 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
-Z11 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
+Z9 !s108 1449872193.289000
+Z10 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd|
+Z11 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd|
 Z12 o-work work -2002 -explicit -O0
 Z13 tExplicit 1
-!s100 dcAJ9SCM2@7P5fY]i3aUi2
+!s100 :Z9=hk0KQ?2NJa2HU6njG1
 !i10b 1
 Aarch
 R1
 R2
 R3
 R4
-DEx4 work 7 fastica 0 22 XJh:o3FVGKN_Jk?hO^lZ83
-l45
-L22
-VmfSaedBd3?mR0bYV]6CI40
+DEx4 work 10 controller 0 22 ELMkAKAmBBX@PN:J>S<D[0
+l37
+L26
+VhBPK3CWImYZ?Xgj<fUID^3
 R8
 32
 R9
@@ -40,25 +40,181 @@ R10
 R11
 R12
 R13
-!s100 dSAS5a=@7P`_S?gSiN2460
+!s100 Q`dDlfzzWLgEPaRH`z<l>0
 !i10b 1
-Efastica_tb
-Z14 w1449765305
+Econvergence_check
+Z14 w1449867287
 R1
 R2
 R3
 R4
 R5
-Z15 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
-Z16 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+Z15 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
+Z16 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
+l0
+L11
+Vz^Pi546cgJGE2L[A>b>l<3
+R8
+32
+Z17 !s108 1449872193.518000
+Z18 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd|
+Z19 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd|
+R12
+R13
+!s100 H;lcN<nZl>BD:MOcThnc03
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 17 convergence_check 0 22 z^Pi546cgJGE2L[A>b>l<3
+l30
+L22
+V:=BmGJ9RFN`lHH05YN[Jb3
+R8
+32
+R17
+R18
+R19
+R12
+R13
+!s100 TG=G9dd_6P8TKTZZ]D]710
+!i10b 1
+Efastica
+Z20 w1449872053
+R1
+R2
+R3
+R4
+R5
+Z21 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+Z22 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+l0
+L11
+VGdGE2m4TG`^GT50jWOcTh3
+R8
+32
+Z23 !s108 1449872191.334000
+Z24 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
+Z25 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
+R12
+R13
+!s100 hB^JRY0T0UTgoiG;_0MXc3
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 7 fastica 0 22 GdGE2m4TG`^GT50jWOcTh3
+l41
+L22
+V?b6Lge9__N^iUlnPIHj>f1
+R8
+32
+R23
+R24
+R25
+R12
+R13
+!s100 d1oUHA>gh^[9`XzfYj`[J1
+!i10b 1
+Efastica_functional
+Z26 w1449855738
+R1
+R2
+R3
+R4
+R5
+Z27 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional.vhd
+Z28 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional.vhd
+l0
+L11
+VFJEN;^4G;oEU2cESVRP023
+R8
+32
+Z29 !s108 1449872192.943000
+Z30 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional.vhd|
+Z31 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional.vhd|
+R12
+R13
+!s100 4dP;lb@YI?9Qc77K_8WEB1
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 18 fastica_functional 0 22 FJEN;^4G;oEU2cESVRP023
+l48
+L22
+Vg2SPA8RQ?j:1G1IEb[G:O1
+R8
+32
+R29
+R30
+R31
+R12
+R13
+!s100 L[<NGb7?GIdJO6VJa[1Te0
+!i10b 1
+Efastica_functional_tb
+Z32 w1449802562
+R1
+R2
+R3
+R4
+R5
+Z33 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd
+Z34 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd
+l0
+L11
+VNcHCbmB_TALigkDbzg7ni3
+R8
+32
+Z35 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd|
+R12
+R13
+Z36 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd|
+!s100 ePSS>U;QI5g;Dfb`V:SJH2
+!i10b 1
+!s108 1449872193.143000
+Aarch
+DPx4 work 10 parameters 0 22 Yh0iI2e8o8]S7B:NHMlTK1
+R2
+R3
+R4
+DEx4 work 21 fastica_functional_tb 0 22 NcHCbmB_TALigkDbzg7ni3
+l23
+L14
+Vm_3?YzSbdzcg3zQEij1W51
+R8
+32
+R35
+R12
+R13
+R36
+!s108 1449849939.200000
+!s100 cI34FgZZH_9zh=kXmZ`Ie1
+!i10b 1
+Efastica_tb
+Z37 w1449870766
+R1
+R2
+R3
+R4
+R5
+Z38 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+Z39 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
 l0
 L11
 VJUaAQLIKX0cAOS1Ld>_oR1
 R8
 32
-Z17 !s108 1449765859.612000
-Z18 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd|
-Z19 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd|
+Z40 !s108 1449872191.548000
+Z41 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd|
+Z42 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd|
 R12
 R13
 !s100 IfCRTFoNz6o>1NBYK20Pz1
@@ -69,55 +225,172 @@ R2
 R3
 R4
 DEx4 work 10 fastica_tb 0 22 JUaAQLIKX0cAOS1Ld>_oR1
-l23
+l26
 L14
-VaWzMJ[lPG9EiWS0m3<3:72
+V@Vz?IoQ<21;mKabB^`R9n1
 R8
 32
-R17
-R18
-R19
+R40
+R41
+R42
 R12
 R13
-!s100 VC0gRkDQ<BllzRZNcEn?`3
+!s100 zB^1XmR]l;PVkW[POO]D`1
 !i10b 1
-Pparameters
-R2
-R3
-R4
-w1449765355
-R5
-8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
-FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
-l0
-L12
-VYh0iI2e8o8]S7B:NHMlTK1
-R8
-32
-R12
-R13
-!s100 bZS04]AZ=LYCeVTR>nD]B1
-!i10b 1
-!s108 1449765859.901000
-!s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd|
-!s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd|
-Ereduction_sum_q11_21
-Z20 w1449706635
+Enormalization_unit
+Z43 w1449856238
 R1
 R2
 R3
 R4
 R5
-Z21 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
-Z22 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
+Z44 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd
+Z45 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd
+l0
+L11
+V_?cU6kf4Q6]cgRI1Qd^do2
+R8
+32
+Z46 !s108 1449872193.702000
+Z47 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd|
+Z48 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd|
+R12
+R13
+!s100 =EH^nX3WE>[VQi_O2e@GV2
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 18 normalization_unit 0 22 _?cU6kf4Q6]cgRI1Qd^do2
+l33
+L22
+Vz`D=W6Dh8^2VnEIU1]AH72
+R8
+32
+R46
+R47
+R48
+R12
+R13
+!s100 41M2P?dozaSNa4bPEg`[U1
+!i10b 1
+Pparameters
+R2
+R3
+R4
+w1449872075
+R5
+8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+l0
+L12
+V9^^FRJhUjFVz?UdJ_oMYk3
+R8
+32
+R12
+R13
+!s100 ]Ad7K0dP57?FJQzzE4;771
+!i10b 1
+!s108 1449872191.793000
+!s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd|
+!s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd|
+Eprocessing_element
+Z49 w1449866171
+R1
+R2
+R3
+R4
+R5
+Z50 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/processing_element.vhd
+Z51 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/processing_element.vhd
+l0
+L11
+VJ;6aL@hgPobU;oOMo5zPN3
+R8
+32
+Z52 !s108 1449872193.887000
+Z53 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/processing_element.vhd|
+Z54 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/processing_element.vhd|
+R12
+R13
+!s100 XJ;^X]Ab1VEQLidZo8B9@1
+!i10b 1
+Aarch
+R1
+R2
+R3
+R4
+DEx4 work 18 processing_element 0 22 J;6aL@hgPobU;oOMo5zPN3
+l31
+L24
+V@V@]Q_?GJF`VL?PiCcAbT0
+!s100 lX4JmY9Jeg^DP>in@L0L:1
+R8
+32
+R52
+R53
+R54
+R12
+R13
+!i10b 1
+Eram
+Z55 w1449867847
+R1
+R2
+R3
+R4
+R5
+Z56 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd
+Z57 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd
+l0
+L16
+VRDZLf<>TC=hSBDGB=<i_:0
+!s100 3>g<>zgkelc:`Mbk^kVR01
+R8
+32
+!i10b 1
+Z58 !s108 1449872194.075000
+Z59 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd|
+Z60 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd|
+R12
+R13
+Aarch
+R1
+R2
+R3
+R4
+Z61 DEx4 work 3 ram 0 22 RDZLf<>TC=hSBDGB=<i_:0
+l36
+L30
+Z62 VMB2>oDlIWMWR0T2lO@cKL2
+Z63 !s100 XBJGo0n?[H?;8fX0a@loX3
+R8
+32
+!i10b 1
+R58
+R59
+R60
+R12
+R13
+Ereduction_sum_q11_21
+Z64 w1449706635
+R1
+R2
+R3
+R4
+R5
+Z65 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
+Z66 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
 l0
 L11
 VVjY9jC4l6nWdWX55j@Y^V0
 R8
 32
-Z23 !s108 1449765860.077000
-Z24 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd|
-Z25 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd|
+Z67 !s108 1449872191.949000
+Z68 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd|
+Z69 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd|
 R12
 R13
 !s100 B5ILQ5kmK=ZNEU6F;do`73
@@ -133,30 +406,30 @@ L18
 V62Nm@V157;R2Ho<n2Z9lL0
 R8
 32
-R23
-R24
-R25
+R67
+R68
+R69
 R12
 R13
 !s100 H?lLN6eU_XY[=3^PAa?=i2
 !i10b 1
 Ersqrt
-Z26 w1449727860
+Z70 w1449793750
 R1
 R2
 R3
 R4
 R5
-Z27 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
-Z28 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
+Z71 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
+Z72 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
 l0
 L11
 V7]LzPdR_=lGh@8a7X?RBN2
 R8
 32
-Z29 !s108 1449765860.282000
-Z30 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd|
-Z31 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd|
+Z73 !s108 1449872192.181000
+Z74 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd|
+Z75 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd|
 R12
 R13
 !s100 e<TW2PaKG[8o`^aB2Bh^K0
@@ -167,35 +440,35 @@ R2
 R3
 R4
 DEx4 work 5 rsqrt 0 22 7]LzPdR_=lGh@8a7X?RBN2
-l22
+l29
 L20
-VU>1HKj?VV_AHBaVT_NRHi2
+VRD7<]2@di:ajQh9l7mFeG3
 R8
 32
-R29
-R30
-R31
+R73
+R74
+R75
 R12
 R13
-!s100 Cn=BjLR0KDT57<@^3W;YG2
+!s100 fR5ed7MeYhkjWeS3odmWX1
 !i10b 1
 Esech2
-Z32 w1449727862
+Z76 w1449791842
 R1
 R2
 R3
 R4
 R5
-Z33 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
-Z34 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
+Z77 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
+Z78 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
 l0
 L11
 V5OaT?UK`;Me_U<4zmUmKU2
 R8
 32
-Z35 !s108 1449765860.487000
-Z36 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd|
-Z37 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd|
+Z79 !s108 1449872192.488000
+Z80 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd|
+Z81 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd|
 R12
 R13
 !s100 6Ej3d]EYneb>XRWdSz;F]2
@@ -206,54 +479,54 @@ R2
 R3
 R4
 DEx4 work 5 sech2 0 22 5OaT?UK`;Me_U<4zmUmKU2
-l22
+l27
 L20
-V;B`J^1NZIoP?9JVDIIRT@3
+V89;]hE07HDTS4h:VzcF5j1
 R8
 32
-R35
-R36
-R37
+R79
+R80
+R81
 R12
 R13
-!s100 0;`mTSD7Z;9G0RlDEbf[@0
+!s100 [Q3;9nYPCLC2NKV3_aXUA2
 !i10b 1
 Etanh
-Z38 w1449770555
+Z82 w1449779632
 R1
 R2
 R3
 R4
 R5
-Z39 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
-Z40 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
+Z83 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
+Z84 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
 l0
 L11
 VhDS>KQTE8_eg0Z=M78gnO1
-!s100 n`=0A`?h0[[<7`]S;j=Yf2
 R8
 32
-!i10b 1
-Z41 !s108 1449770559.458000
-Z42 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd|
-Z43 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd|
+Z85 !s108 1449872192.694000
+Z86 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd|
+Z87 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd|
 R12
 R13
+!s100 n`=0A`?h0[[<7`]S;j=Yf2
+!i10b 1
 Aarch
 R1
 R2
 R3
 R4
-Z44 DEx4 work 4 tanh 0 22 hDS>KQTE8_eg0Z=M78gnO1
-l26
+DEx4 work 4 tanh 0 22 hDS>KQTE8_eg0Z=M78gnO1
+l27
 L20
-VlDL<LI;g^1c9M>iGXjTca0
-!s100 PLMZS3b45PPaQK8eme`lo3
+V:kR]CLh`klmcC2i^ob4m^1
 R8
 32
-!i10b 1
-R41
-R42
-R43
+R85
+R86
+R87
 R12
 R13
+!s100 CjU;3=S2iVi304Y>_;nm91
+!i10b 1

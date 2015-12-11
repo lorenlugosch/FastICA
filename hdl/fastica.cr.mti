@@ -1,22 +1,37 @@
-Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd
+Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/processing_element.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/processing_element.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Loading package STANDARD
 -- Loading package TEXTIO
 -- Loading package std_logic_1164
 -- Loading package NUMERIC_STD
 -- Loading package parameters
--- Compiling entity fastica
--- Compiling architecture arch of fastica
+-- Compiling entity processing_element
+-- Compiling architecture arch of processing_element
 
-} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd {0 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Loading package STANDARD
 -- Loading package TEXTIO
 -- Loading package std_logic_1164
 -- Loading package NUMERIC_STD
 -- Loading package parameters
--- Compiling entity fastica_tb
--- Compiling architecture arch of fastica_tb
+-- Compiling entity fastica_functional_tb
+-- Compiling architecture arch of fastica_functional_tb
+** Error: Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd(30): (vcom-1484) Unknown formal identifier "ws0".
+
+** Error: Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd(31): (vcom-1484) Unknown formal identifier "ws1".
+
+** Error: Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd(58): VHDL Compiler exiting
+
+} {10.0 11.0 12.0 13.0 14.0 15.0} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity controller
+-- Compiling architecture arch of controller
 
 } {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/rsqrt.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
@@ -28,13 +43,15 @@ Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Compiling entity rsqrt
 -- Compiling architecture arch of rsqrt
 
-} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Loading package STANDARD
 -- Loading package TEXTIO
 -- Loading package std_logic_1164
 -- Loading package NUMERIC_STD
--- Compiling package parameters
+-- Loading package parameters
+-- Compiling entity convergence_check
+-- Compiling architecture arch of convergence_check
 
 } {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/reduction_sum_Q11_21.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
@@ -45,5 +62,75 @@ Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Loading package parameters
 -- Compiling entity reduction_sum_Q11_21
 -- Compiling architecture arch of reduction_sum_Q11_21
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity fastica_functional
+-- Compiling architecture arch of fastica_functional
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity normalization_unit
+-- Compiling architecture arch of normalization_unit
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity fastica_tb
+-- Compiling architecture arch of fastica_tb
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd {2 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity RAM
+-- Compiling architecture arch of RAM
+** Warning: Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/RAM.vhd(34): (vcom-1236) Shared variables must be of a protected type.
+
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/tanh.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity tanh
+-- Compiling architecture arch of tanh
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/parameters.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Compiling package parameters
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/sech2.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity sech2
+-- Compiling architecture arch of sech2
 
 } {} {}}
