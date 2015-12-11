@@ -46,7 +46,7 @@ PACKAGE parameters IS
 	TYPE Q21_43_array_N IS ARRAY(0 TO N-1) OF SIGNED(Q21_43.data_width-1 DOWNTO 0);
 	TYPE Q21_43_array_T IS ARRAY(0 TO T-1) OF SIGNED(Q21_43.data_width-1 DOWNTO 0);
 
-	COMPONENT fastica IS
+	COMPONENT fastica_functional IS
 		PORT(
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;

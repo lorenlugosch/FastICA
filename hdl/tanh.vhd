@@ -45,7 +45,7 @@ BEGIN
 
 	END PROCESS;
 
-	c <= (a * p1) + b;
+	c <= ((a * p1) sll 1) + b;
 	d <= c srl 33;
 	tp <= d(Q6_10.data_width-1 DOWNTO 0);
 
