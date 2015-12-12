@@ -154,7 +154,7 @@ Makes rotation vector into unit vector.
 void normalize() {
 	int i;
 	float w_rnorm = rnorm();
-	#pragma omp parallel for num_threads(2) private(i)
+	//#pragma omp parallel for num_threads(2) private(i)
 	for (i = 0; i < N; i++) {
 		w_next[i] *= w_rnorm;
 	}
