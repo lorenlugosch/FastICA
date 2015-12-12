@@ -29,6 +29,8 @@ Q21_43 sum_2;
 Q11_21 w_rnorm;
 Q11_21 dot_product;
 
+Q11_21 sp[T];
+
 /* reciprocal square root (piecewise linear approximation) */
 Q11_21 rsqrt(Q21_43 input) {
 	Q11_21 a;
@@ -126,13 +128,15 @@ void fastica() {
 			}	
 		} 
 
+		for (t = 0; t < T; t++) {
+			sp[t] = linear_sech2(product_1[t]);
+		}
+
 		sum_1 = 0;
 		#pragma omp parallel for reduction(+:sum_1)
 		for (t = 0; t < T; t++) {
-			sum_1 += linear_sech2(product_1[t]);
-			// printf("sum_1: %d\n",sum_1); 
-		} 
-		// while(1);
+			sum_1 += sp[t];
+		}
 
 		for (n = 0; n < N; n++) {
 			// divide sum_1 by 2 (shift by 12 instead of 11), multiply w by 2
