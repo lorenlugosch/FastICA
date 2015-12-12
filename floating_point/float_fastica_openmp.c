@@ -136,12 +136,12 @@ void rotate() {
 		sum_1 += linear_sech2(product_1[t]);
 	}
 
-	#pragma omp parallel for num_threads(2) private(n)
+	//#pragma omp parallel for num_threads(2) private(n)
 	for (n = 0; n < N; n++) {
 		product_3[n] = w[n] * sum_1;
 	}
 
-	#pragma omp parallel for num_threads(2) private(n)
+	//#pragma omp parallel for num_threads(2) private(n)
 	for (n = 0; n < N; n++) {
 		w_next[n] = (product_2[n] - product_3[n]) / N;
 	}
