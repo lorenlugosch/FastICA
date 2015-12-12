@@ -83,7 +83,7 @@ float rnorm() {
 	float sum = 0;
 	int n;
 
-	#pragma omp parallel for num_threads(2) private(n)
+	//#pragma omp parallel for num_threads(2) private(n)
 	for (n = 0; n < N; n++) {
 		sum += w_next[n] * w_next[n];
 	}
