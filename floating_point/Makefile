@@ -1,4 +1,4 @@
-NAME=float_fastica
+NAME=float_fastica_openmp
 ifeq (&(NO_OPT),)
 	NO_OPT=1
 endif
