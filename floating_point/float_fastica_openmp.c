@@ -123,7 +123,7 @@ void rotate() {
 	}
 	while(1);
 
-	#pragma omp parallel for num_threads(2) private(n,t)
+	//#pragma omp parallel for num_threads(2) private(n,t)
 	for (n = 0; n < N; n++) {
 		product_2[n] = 0; 
 		for (t = 0; t < T; t++) {
