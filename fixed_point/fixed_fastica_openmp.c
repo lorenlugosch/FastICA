@@ -106,6 +106,7 @@ void fastica() {
 	/* rotate, normalize, and repeat */
 	while(fabs(fabs(dot_product)-2097152) > EPSILON) {
 		/* update w */
+		#pragma omp parallel for num_threads(2) private(n)
 		for (n = 0; n < N; n++) {
 			w_Q6_10[n] = w_next_Q6_10[n];
 		}
@@ -119,6 +120,7 @@ void fastica() {
 
 		}
 
+		//#pragma omp parallel for num_threads(2) private(n, t)
 		for (n = 0; n < N; n++) {
 			product_2[n] = 0; 
 			for (t = 0; t < T; t++) {
@@ -131,11 +133,13 @@ void fastica() {
 			sum_1 += linear_sech2(product_1[t]);
 		}
 
+		#pragma omp parallel for num_threads(2) private(n)
 		for (n = 0; n < N; n++) {
 			// divide sum_1 by 2 (shift by 12 instead of 11), multiply w by 2
 			product_3[n] = multiply_Q6_10_by_Q6_10(w_Q6_10[n] << 1, (Q6_10)(sum_1 >> 12));
 		}
 
+		#pragma omp parallel for num_threads(2) private(n)
 		for (n = 0; n < N; n++) {
 			w_next_Q11_21[n] = (product_2[n] - product_3[n]) >> 1;
 			w_next_Q6_10[n] = (Q6_10)(w_next_Q11_21[n] >> 11);
@@ -147,6 +151,8 @@ void fastica() {
 			sum_2 += ((Q21_43)(multiply_Q6_10_by_Q6_10(w_next_Q6_10[n], w_next_Q6_10[n])))<<22;
 		}
 		w_rnorm = rsqrt(sum_2);
+
+		#pragma omp parallel for num_threads(2) private(n)
 		for (n = 0; n < N; n++) {
 			w_next_Q21_43[n] = multiply_Q11_21_by_Q11_21(w_rnorm, w_next_Q11_21[n]);
 			w_next_Q6_10[n] = (Q6_10)(w_next_Q21_43[n] >> 33);
