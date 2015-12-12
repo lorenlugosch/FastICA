@@ -129,7 +129,7 @@ void rotate() {
 	}
 
 	sum_1 = 0;
-	for (t = 0; t < T; t++) {
+loop:	for (t = 0; t < T; t++) {
 		sum_1 += linear_sech2(product_1[t]);
 	}
 
