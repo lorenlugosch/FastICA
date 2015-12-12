@@ -1,3 +1,4 @@
+//#include <omp.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdint.h>
@@ -107,11 +108,12 @@ void fastica() {
 
 	/* rotate, normalize, and repeat */
 	while(fabs(fabs(dot_product)-2097152) > EPSILON) {
+printf("here1\n");
 		/* update w */
 		for (n = 0; n < N; n++) {
 			w_Q6_10[n] = w_next_Q6_10[n];
 		}
-		
+printf("here2\n");
 		/* rotate */
 		for (t = 0; t < T; t++) {
 			product_1[t] = 0;
@@ -120,12 +122,16 @@ void fastica() {
 			}
 		}
 
+Q11_21 p2 = 0;
+
 		for (n = 0; n < N; n++) {
-			product_2[n] = 0; 
+			p2 = 0; 
+#pragma omp parallel for reduction(+:p2)
 			for (t = 0; t < T; t++) {
-				product_2[n] += multiply_Q6_10_by_Q6_10(whitened_signals[n][t], linear_tanh(product_1[t]));
+				p2 += multiply_Q6_10_by_Q6_10(whitened_signals[n][t], linear_tanh(product_1[t]));
 				// if (n == 0) printf("product_2: %d\n",product_2[n]); 
-			}	
+			}
+			product_2[n] = p2;
 		} 
 
 		for (t = 0; t < T; t++) {
@@ -133,7 +139,7 @@ void fastica() {
 		}
 
 		sum_1 = 0;
-		#pragma omp parallel for reduction(+:sum_1)
+//		#pragma omp parallel for reduction(+:sum_1)
 		for (t = 0; t < T; t++) {
 			sum_1 += sp[t];
 		}
