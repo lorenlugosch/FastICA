@@ -115,11 +115,8 @@ void rotate() {
 		product_1[t] = 0;
 		for (n = 0; n < N; n++) {
 			product_1[t] += w[n]*whitened_signals[n][t];
-			printf("p1 = %f * %f: %f\n",w[n],whitened_signals[n][t],product_1[t]);
 		}
-		printf("\n");
 	}
-	while(1);
 
 	for (n = 0; n < N; n++) {
 		product_2[n] = 0; 
@@ -149,12 +146,9 @@ Makes rotation vector into unit vector.
 void normalize() {
 	int i;
 	float w_rnorm = rnorm();
-	printf("w_next before normalization: [%f %f]\n", w_next[0], w_next[1]); 
-	printf("rnorm: %f\n",w_rnorm);
 	for (i = 0; i < N; i++) {
 		w_next[i] *= w_rnorm;
 	}
-	printf("w_next after normalization: [%f %f]\n\n", w_next[0], w_next[1]); 
 }
 
 /*
@@ -163,13 +157,11 @@ Finds one of the vectors of the unmixing matrix.
 */
 void fastica() {
 	/* rotate, normalize, and repeat */
-	int iteration = 0;
 	while(!converged()) {
 		//printf("w: [%f %f], w_next: [%f %f]\n",w[0],w[1],w_next[0],w_next[1]);//DBL2HEX(w[0]),DBL2HEX(w[1]));
 		update_w();
 		rotate();
 		normalize();
-		iteration++; if (iteration>10) break;
 	}
 }
 
