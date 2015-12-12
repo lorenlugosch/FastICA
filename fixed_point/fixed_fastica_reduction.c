@@ -9,6 +9,8 @@
 #define MAX_POSITIVE_Q11_21 2147483647
 #define MAX_POSITIVE_Q21_43 9223372036854775807
 
+Q11_21 p2 = 0;
+
 Q11_21 multiply_Q6_10_by_Q6_10(Q6_10 a, Q6_10 b) {
 	if ((a == b) && (a == MAX_NEGATIVE_Q6_10)) { return MAX_POSITIVE_Q11_21; }
 	Q11_21 cc = (Q11_21)a * (Q11_21)b * 2;
@@ -122,7 +124,7 @@ printf("here2\n");
 			}
 		}
 
-Q11_21 p2 = 0;
+
 
 		for (n = 0; n < N; n++) {
 			p2 = 0; 
