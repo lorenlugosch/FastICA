@@ -32,7 +32,7 @@ ARCHITECTURE arch OF controller IS
 	CONSTANT normalization_pipeline_offset : INTEGER := 5;
 	CONSTANT normalization_latency : INTEGER := rotation_latency + normalization_pipeline_offset;
 
-	SIGNAL counter : INTEGER RANGE 0 TO 100;--normalization_latency;
+	SIGNAL counter : INTEGER RANGE 0 TO 100;
 	SIGNAL address: INTEGER RANGE 0 TO T - 1;
 
 	TYPE state_type IS (

@@ -180,5 +180,5 @@ printf("here2\n");
 int main() {
 	/* find unmixing vector */ 
 	fastica();
-	printf("The unmixing vector is : [%d %d]\n",w_Q6_10[0],w_Q6_10[1]);
+	printf("The unmixing vector is : [%d %d]\n",w_next_Q6_10[0],w_next_Q6_10[1]);
 }

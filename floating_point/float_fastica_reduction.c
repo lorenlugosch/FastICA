@@ -1,4 +1,3 @@
-//#include <omp.h>
 #include <stdio.h>
 #include <math.h>
 #include "float_fastica.h"
@@ -116,11 +115,8 @@ void rotate() {
 		product_1[t] = 0;
 		for (n = 0; n < N; n++) {
 			product_1[t] += w[n]*whitened_signals[n][t];
-			printf("p1 = %f * %f: %f\n",w[n],whitened_signals[n][t],product_1[t]);
 		}
-		printf("\n");
 	}
-	while(1);
 
 	//#pragma omp parallel for num_threads(2) private(n,t)
 	for (n = 0; n < N; n++) {

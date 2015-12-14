@@ -32,7 +32,6 @@ float linear_tanh(float input) {
 	else if (input > 3) 						{a = 0.000732422; b = 1;}
 
 	return a*input + b;
-//	return tanh(input);
 }
 
 /* Piecewise linear approximation of 
@@ -88,7 +87,6 @@ float rnorm() {
 		sum += w_next[n] * w_next[n];
 	}
 
-	printf("sum: %f\n", sum);
 	return rsqrt(sum);
 	//return 1/sqrt(sum);
 }

@@ -138,4 +138,5 @@ BEGIN
 	ws_in(0) <= RAM_out(Q6_10.data_width-1 DOWNTO 0);
 
 	w <= w_next_Q6_10;
+	done <= converged;
 END arch;

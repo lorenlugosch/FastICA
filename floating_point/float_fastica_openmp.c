@@ -86,7 +86,6 @@ float rnorm() {
 		sum += w_next[n] * w_next[n];
 	}
 
-	printf("sum: %f\n", sum);
 	return rsqrt(sum);
 	//return 1/sqrt(sum);
 }
