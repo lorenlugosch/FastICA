@@ -1,10 +1,11 @@
 
 State Machine - |fastica|controller:C|state
-Name state.done state.normalizing_done state.normalizing state.rotating_done state.rotating state.rotating_start state.ready 
-state.ready 0 0 0 0 0 0 0 
-state.rotating_start 0 0 0 0 0 1 1 
-state.rotating 0 0 0 0 1 0 1 
-state.rotating_done 0 0 0 1 0 0 1 
-state.normalizing 0 0 1 0 0 0 1 
-state.normalizing_done 0 1 0 0 0 0 1 
-state.done 1 0 0 0 0 0 1 
+Name state.done state.normalizing_done state.normalizing state.normalizing_start state.rotating_done state.rotating state.rotating_start state.ready 
+state.ready 0 0 0 0 0 0 0 0 
+state.rotating_start 0 0 0 0 0 0 1 1 
+state.rotating 0 0 0 0 0 1 0 1 
+state.rotating_done 0 0 0 0 1 0 0 1 
+state.normalizing_start 0 0 0 1 0 0 0 1 
+state.normalizing 0 0 1 0 0 0 0 1 
+state.normalizing_done 0 1 0 0 0 0 0 1 
+state.done 1 0 0 0 0 0 0 1 

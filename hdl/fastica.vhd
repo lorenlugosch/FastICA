@@ -38,9 +38,10 @@ ARCHITECTURE arch OF fastica IS
 	SIGNAL p2_out : Q11_21_array_N;
 	SIGNAL ws_in : Q6_10_array_N;
 	SIGNAL first_iteration : STD_LOGIC;
-	SIGNAL rotation_start : STD_LOGIC;
-	SIGNAL rotation_enable : STD_LOGIC;
-	SIGNAL normalization_enable : STD_LOGIC;
+	SIGNAL rotation_start_token : STD_LOGIC;
+	SIGNAL rotation_end_token : STD_LOGIC;
+	SIGNAL normalization_start_token : STD_LOGIC;
+	SIGNAL normalization_end_token : STD_LOGIC;
 
 BEGIN
 
@@ -63,9 +64,7 @@ BEGIN
 			p2_in(0) <= (OTHERS => '0');
 			p2_in(1) <= (OTHERS => '0');
 		ELSIF (RISING_EDGE(clock)) THEN
-			IF (rotation_enable = '1') THEN
-				sum_1_in <= sum_1_out;
-			END IF;
+			sum_1_in <= sum_1_out;
 			p2_in <= p2_out;
 		END IF;
 	END PROCESS;
@@ -80,18 +79,18 @@ BEGIN
 		END IF;
 	END PROCESS;
 
-	PROCESS(rotation_start, p2_in, sum_1_in)
-	BEGIN
-		IF (rotation_start = '1') THEN
-			p2_in_safe(0) <= (OTHERS => '0');
-			p2_in_safe(1) <= (OTHERS => '0');
-			sum_1_in_safe <= (OTHERS => '0');
-		ELSE 
-			p2_in_safe(0) <= p2_in(0);
-			p2_in_safe(1) <= p2_in(1);
-			sum_1_in_safe <= sum_1_in;
-		END IF;
-	END PROCESS;
+	--PROCESS(rotation_start, p2_in, sum_1_in)
+	--BEGIN
+	--	IF (rotation_start = '1') THEN
+	--		p2_in_safe(0) <= (OTHERS => '0');
+	--		p2_in_safe(1) <= (OTHERS => '0');
+	--		sum_1_in_safe <= (OTHERS => '0');
+	--	ELSE 
+			--p2_in_safe(0) <= p2_in(0);
+			--p2_in_safe(1) <= p2_in(1);
+			--sum_1_in_safe <= sum_1_in;
+	--	END IF;
+	--END PROCESS;
 
 
 	PE: processing_element
@@ -100,11 +99,12 @@ BEGIN
 		reset => reset,
 		ws => ws_in,
 		w_Q6_10 => w_Q6_10,
-		sum_1_in => sum_1_in_safe,
+		sum_1_in => sum_1_in,
 		sum_1_out => sum_1_out,
-		p2_in => p2_in_safe,
+		p2_in => p2_in,
 		p2_out => p2_out,
-		enable => rotation_enable
+		start_token => rotation_start_token,
+		end_token => rotation_end_token
 	);
 
 	NU: normalization_unit
@@ -115,7 +115,8 @@ BEGIN
 		sum_1 => sum_1_out,
 		p2 => p2_out,
 		w_next_Q6_10 => w_next_Q6_10,
-		enable => normalization_enable
+		start_token => normalization_start_token,
+		end_token => normalization_end_token
 	);
 
 	CC: convergence_check
@@ -139,9 +140,10 @@ BEGIN
 		valid_p1 => valid_p1,
 		RAM_we => RAM_we,
 		first_iteration => first_iteration,
-		rotation_start => rotation_start,
-		rotation_enable => rotation_enable,
-		normalization_enable => normalization_enable
+		rotation_start_token => rotation_start_token,
+		rotation_end_token => rotation_end_token,
+		normalization_start_token => normalization_start_token,
+		normalization_end_token =>normalization_end_token
 	);
 
 	ws_hack <= ws(1) & ws(0); -- needed for Modelsim

@@ -12,7 +12,8 @@ ENTITY processing_element IS
 	PORT(
 		clock : IN STD_LOGIC;
 		reset : IN STD_LOGIC;
-		enable : IN STD_LOGIC;
+		start_token : IN STD_LOGIC;
+		end_token : IN STD_LOGIC;
 		ws : IN Q6_10_array_N;
 		w_Q6_10 : IN Q6_10_array_N;
 		sum_1_in : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
@@ -35,9 +36,12 @@ ARCHITECTURE arch OF processing_element IS
 	SIGNAL sp_reg : SIGNED(Q11_21.data_width-1 DOWNTO 0);
 	SIGNAL tpws : Q11_21_array_N;
 	SIGNAL tpws_reg : Q11_21_array_N;
-	SIGNAL enabled_previous : STD_LOGIC;
-	SIGNAL enabled_previous_2 : STD_LOGIC;
-	SIGNAL enabled_previous_3 : STD_LOGIC;
+	SIGNAL start_token_reg_1 : STD_LOGIC;
+	SIGNAL start_token_reg_2 : STD_LOGIC;
+	SIGNAL start_token_reg_3 : STD_LOGIC;
+	SIGNAL end_token_reg_1 : STD_LOGIC;
+	SIGNAL end_token_reg_2 : STD_LOGIC;
+	SIGNAL end_token_reg_3 : STD_LOGIC;
 
 BEGIN
 
@@ -65,14 +69,20 @@ BEGIN
 		tpws(1) <= (tp_reg * ws_reg_2(1)) sll 1;
 	END PROCESS;
 
-	PROCESS(sum_1_in, sp_reg, enabled_previous_3)
+	PROCESS(sum_1_in, sp_reg, start_token_reg_3, end_token_reg_3, p2_in, tpws)
 	BEGIN
 		-- if circuit enabled 3 clock cycles ago, allow output
-		IF (enabled_previous_3 = '1') THEN
+		IF (start_token_reg_3 = '0') AND (end_token_reg_3 = '0') THEN
 			sum_1_out <= sp_reg + sum_1_in;
-			p2_out(0) <= tpws_reg(0) + p2_in(0);
-			p2_out(1) <= tpws_reg(1) + p2_in(1);
-		ELSE
+			p2_out(0) <= tpws(0) + p2_in(0);
+			p2_out(1) <= tpws(1) + p2_in(1);
+		ELSIF (start_token_reg_3 = '0') AND (end_token_reg_3 = '1') THEN
+			sum_1_out <= sum_1_in;
+			p2_out <= p2_in;
+		ELSIF (start_token_reg_3 = '1') AND (end_token_reg_3 = '0') THEN
+			sum_1_out <= sp_reg;
+			p2_out <= tpws;
+		ELSE -- shouldn't happen
 			sum_1_out <= (OTHERS => '0');
 			p2_out(0) <= (OTHERS => '0');
 			p2_out(1) <= (OTHERS => '0');
@@ -89,21 +99,24 @@ BEGIN
 			p1_reg <= (OTHERS => '0');
 			tp_reg <= (OTHERS => '0');
 			sp_reg <= (OTHERS => '0');
-			tpws_reg(0) <= (OTHERS => '0');
-			tpws_reg(1) <= (OTHERS => '0');
-			enabled_previous <= '0';
-			enabled_previous_2 <= '0';
-			enabled_previous_3 <= '0';
-		ELSIF (RISING_EDGE(clock) AND enable = '1') THEN
+			start_token_reg_1 <= '0';
+			start_token_reg_2 <= '0';
+			start_token_reg_3 <= '0';
+			end_token_reg_1 <= '0';
+			end_token_reg_2 <= '0';
+			end_token_reg_3 <= '0';
+		ELSIF (RISING_EDGE(clock)) THEN
 			ws_reg_1 <= ws;
 			ws_reg_2 <= ws_reg_1;
 			p1_reg <= p1;
 			tp_reg <= tp;
 			sp_reg <= sp;
-			tpws_reg <= tpws;
-			enabled_previous <= enable;
-			enabled_previous_2 <= enabled_previous;
-			enabled_previous_3 <= enabled_previous_2;
+			start_token_reg_1 <= start_token;
+			start_token_reg_2 <= start_token_reg_1;
+			start_token_reg_3 <= start_token_reg_2;
+			end_token_reg_1 <= end_token;
+			end_token_reg_2 <= end_token_reg_1;
+			end_token_reg_3 <= end_token_reg_2;
 		END IF;
 	END PROCESS;
 

@@ -23,7 +23,17 @@ Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 
 ** Error: Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_functional_tb.vhd(58): VHDL Compiler exiting
 
-} {10.0 11.0 12.0 13.0 14.0 15.0} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
+} {10.0 11.0 12.0 13.0 14.0 15.0} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd
+Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
+-- Loading package STANDARD
+-- Loading package TEXTIO
+-- Loading package std_logic_1164
+-- Loading package NUMERIC_STD
+-- Loading package parameters
+-- Compiling entity controller
+-- Compiling architecture arch of controller
+
+} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Loading package STANDARD
 -- Loading package TEXTIO
@@ -62,16 +72,6 @@ Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
 -- Loading package parameters
 -- Compiling entity fastica_functional
 -- Compiling architecture arch of fastica_functional
-
-} {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/normalization_unit.vhd
-Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012
--- Loading package STANDARD
--- Loading package TEXTIO
--- Loading package std_logic_1164
--- Loading package NUMERIC_STD
--- Loading package parameters
--- Compiling entity normalization_unit
--- Compiling architecture arch of normalization_unit
 
 } {} {}} Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd {1 {vcom -work work -2002 -explicit Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica_tb.vhd
 Model Technology ModelSim ALTERA vcom 10.1d Compiler 2012.11 Nov  2 2012

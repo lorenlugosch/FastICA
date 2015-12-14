@@ -122,9 +122,10 @@ PACKAGE parameters IS
 			valid_p1 : OUT STD_LOGIC;
 			RAM_we : OUT STD_LOGIC;
 			first_iteration : OUT STD_LOGIC;
-			rotation_start : OUT STD_LOGIC;
-			rotation_enable : OUT STD_LOGIC;
-			normalization_enable : OUT STD_LOGIC
+			rotation_start_token : OUT STD_LOGIC;
+			rotation_end_token : OUT STD_LOGIC;
+			normalization_start_token : OUT STD_LOGIC;
+			normalization_end_token : OUT STD_LOGIC
 		);
 	END COMPONENT;
 
@@ -132,7 +133,8 @@ PACKAGE parameters IS
 		PORT(
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;
-			enable : IN STD_LOGIC;
+			start_token : IN STD_LOGIC;
+			end_token : IN STD_LOGIC;
 			ws : IN Q6_10_array_N;
 			w_Q6_10 : IN Q6_10_array_N;
 			sum_1_in : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
@@ -146,11 +148,12 @@ PACKAGE parameters IS
 		PORT(
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;
-			enable : IN STD_LOGIC;
 			w_Q6_10 : IN Q6_10_array_N;
 			sum_1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
 			p2 : IN Q11_21_array_N;
-			w_next_Q6_10 : OUT Q6_10_array_N
+			w_next_Q6_10 : OUT Q6_10_array_N;
+			start_token : IN STD_LOGIC;
+			end_token : IN STD_LOGIC
 		);
 	END COMPONENT;
 
