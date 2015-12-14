@@ -29,7 +29,7 @@ END ENTITY;
 ARCHITECTURE arch OF controller IS
 	CONSTANT rotation_pipeline_offset : INTEGER := -1;
 	CONSTANT rotation_latency : INTEGER := T + rotation_pipeline_offset;
-	CONSTANT normalization_pipeline_offset : INTEGER := 3;
+	CONSTANT normalization_pipeline_offset : INTEGER := 5;
 	CONSTANT normalization_latency : INTEGER := rotation_latency + normalization_pipeline_offset;
 
 	SIGNAL counter : INTEGER RANGE 0 TO 100;--normalization_latency;
@@ -107,7 +107,11 @@ BEGIN
 				rotation_start_token <= '0';
 				rotation_end_token <= '1';
 				normalization_start_token <= '0';
-				normalization_end_token <= '0';
+				IF (counter = normalization_latency - 2) THEN
+					normalization_end_token <= '1';
+				ELSE 
+					normalization_end_token <= '0';
+				END IF;
 
 			WHEN normalizing_done => 
 				valid_w <= '0';
@@ -116,7 +120,7 @@ BEGIN
 				rotation_start_token <= '0';
 				rotation_end_token <= '1';
 				normalization_start_token <= '0';
-				normalization_end_token <= '1';
+				normalization_end_token <= '0';
 
 			when done => 
 				valid_w <= '0';

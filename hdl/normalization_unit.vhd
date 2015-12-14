@@ -69,9 +69,6 @@ BEGIN
 	w_next(0) <= w_next_Q21_43(0) srl 33;
 	w_next(1) <= w_next_Q21_43(1) srl 33; 
 
-	w_next_Q6_10(0) <= w_next(0)(Q6_10.data_width-1 DOWNTO 0);
-	w_next_Q6_10(1) <= w_next(1)(Q6_10.data_width-1 DOWNTO 0);
-
 	PROCESS(clock, reset)
 	BEGIN
 		IF (reset = '1') THEN
@@ -88,6 +85,7 @@ BEGIN
 			end_token_reg_1 <= '0';
 			end_token_reg_2 <= '0';
 			end_token_reg_3 <= '0';
+			w_next_Q6_10 <= ((OTHERS => '0'),(OTHERS => '0'));
 
 		ELSIF (RISING_EDGE(clock)) THEN
 			p2_reg <= p2;
@@ -109,6 +107,8 @@ BEGIN
 			end_token_reg_1 <= end_token;
 			end_token_reg_2 <= end_token_reg_1;
 			end_token_reg_3 <= end_token_reg_2;
+			w_next_Q6_10(0) <= w_next(0)(Q6_10.data_width-1 DOWNTO 0);
+			w_next_Q6_10(1) <= w_next(1)(Q6_10.data_width-1 DOWNTO 0);
 			
 		END IF;
 	END PROCESS;
