@@ -31,14 +31,21 @@ ARCHITECTURE arch OF RAM IS
 	-- Build a 2-D array type for the RAM
 	TYPE memory_t is ARRAY((size - 1) DOWNTO 0) OF SIGNED((N*params.data_width)-1 DOWNTO 0);
 	-- Declare the RAM signal.
-	SHARED VARIABLE ram : memory_t;
+	SIGNAL ram : memory_t;
  
 BEGIN
 	PROCESS(clock)
 	BEGIN
+		-- taken from Jonah Caplan's ECSE 487 memory model
+		IF(now < 1 ps)THEN
+			For i in 0 to size-1 LOOP
+				ram(i) <= (OTHERS => '0');
+			END LOOP;
+		end if;
+
 		IF(rising_edge(clock)) THEN -- Port 0
 			IF(we = '1') THEN
-				ram(address) := datain;
+				ram(address) <= datain;
 				dataout <= datain;
 			ELSE
 				dataout <= ram(address);
