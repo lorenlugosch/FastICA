@@ -1,5 +1,5 @@
 Analysis & Synthesis report for vlsi_dsp_project
-Mon Dec 14 11:15:30 2015
+Mon Dec 14 13:42:44 2015
 Quartus II 64-Bit Version 13.1.0 Build 162 10/23/2013 SJ Web Edition
 
 
@@ -27,9 +27,9 @@ Quartus II 64-Bit Version 13.1.0 Build 162 10/23/2013 SJ Web Edition
  19. Parameter Settings for Inferred Entity Instance: RAM:ws_ram|altsyncram:ram_rtl_0
  20. Parameter Settings for Inferred Entity Instance: normalization_unit:NU|lpm_mult:Mult5
  21. Parameter Settings for Inferred Entity Instance: normalization_unit:NU|lpm_mult:Mult4
- 22. Parameter Settings for Inferred Entity Instance: convergence_check:CC|lpm_mult:Mult0
- 23. Parameter Settings for Inferred Entity Instance: convergence_check:CC|lpm_mult:Mult1
- 24. Parameter Settings for Inferred Entity Instance: normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0
+ 22. Parameter Settings for Inferred Entity Instance: normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0
+ 23. Parameter Settings for Inferred Entity Instance: convergence_check:CC|lpm_mult:Mult0
+ 24. Parameter Settings for Inferred Entity Instance: convergence_check:CC|lpm_mult:Mult1
  25. Parameter Settings for Inferred Entity Instance: normalization_unit:NU|lpm_mult:Mult2
  26. Parameter Settings for Inferred Entity Instance: normalization_unit:NU|lpm_mult:Mult3
  27. Parameter Settings for Inferred Entity Instance: processing_element:PE|lpm_mult:Mult3
@@ -71,15 +71,15 @@ applicable agreement for further details.
 +---------------------------------------------------------------------------------+
 ; Analysis & Synthesis Summary                                                    ;
 +------------------------------------+--------------------------------------------+
-; Analysis & Synthesis Status        ; Successful - Mon Dec 14 11:15:30 2015      ;
+; Analysis & Synthesis Status        ; Successful - Mon Dec 14 13:42:44 2015      ;
 ; Quartus II 64-Bit Version          ; 13.1.0 Build 162 10/23/2013 SJ Web Edition ;
 ; Revision Name                      ; vlsi_dsp_project                           ;
 ; Top-level Entity Name              ; fastica                                    ;
 ; Family                             ; Cyclone IV GX                              ;
-; Total logic elements               ; 1,959                                      ;
-;     Total combinational functions  ; 1,626                                      ;
-;     Dedicated logic registers      ; 718                                        ;
-; Total registers                    ; 718                                        ;
+; Total logic elements               ; 1,948                                      ;
+;     Total combinational functions  ; 1,583                                      ;
+;     Dedicated logic registers      ; 810                                        ;
+; Total registers                    ; 810                                        ;
 ; Total pins                         ; 68                                         ;
 ; Total virtual pins                 ; 0                                          ;
 ; Total memory bits                  ; 2,048                                      ;
@@ -209,8 +209,8 @@ applicable agreement for further details.
 ; bypassff.inc                     ; yes             ; Megafunction                 ; c:/altera/13.1/quartus/libraries/megafunctions/bypassff.inc                      ;         ;
 ; altshift.inc                     ; yes             ; Megafunction                 ; c:/altera/13.1/quartus/libraries/megafunctions/altshift.inc                      ;         ;
 ; db/mult_v9t.tdf                  ; yes             ; Auto-Generated Megafunction  ; //psf/Dropbox/_grad_school/_Fall2015/vlsi_dsp/project/hdl/db/mult_v9t.tdf        ;         ;
-; db/mult_t9t.tdf                  ; yes             ; Auto-Generated Megafunction  ; //psf/Dropbox/_grad_school/_Fall2015/vlsi_dsp/project/hdl/db/mult_t9t.tdf        ;         ;
 ; db/mult_4at.tdf                  ; yes             ; Auto-Generated Megafunction  ; //psf/Dropbox/_grad_school/_Fall2015/vlsi_dsp/project/hdl/db/mult_4at.tdf        ;         ;
+; db/mult_t9t.tdf                  ; yes             ; Auto-Generated Megafunction  ; //psf/Dropbox/_grad_school/_Fall2015/vlsi_dsp/project/hdl/db/mult_t9t.tdf        ;         ;
 ; db/mult_q9t.tdf                  ; yes             ; Auto-Generated Megafunction  ; //psf/Dropbox/_grad_school/_Fall2015/vlsi_dsp/project/hdl/db/mult_q9t.tdf        ;         ;
 ; db/mult_s9t.tdf                  ; yes             ; Auto-Generated Megafunction  ; //psf/Dropbox/_grad_school/_Fall2015/vlsi_dsp/project/hdl/db/mult_s9t.tdf        ;         ;
 +----------------------------------+-----------------+------------------------------+----------------------------------------------------------------------------------+---------+
@@ -225,8 +225,8 @@ applicable agreement for further details.
 ; Total memory bits        ; 2048             ;
 ; DSP block 9-bit elements ; 68               ;
 ; Maximum fan-out node     ; clock~input      ;
-; Maximum fan-out          ; 750              ;
-; Total fan-out            ; 9063             ;
+; Maximum fan-out          ; 842              ;
+; Total fan-out            ; 9227             ;
 ; Average fan-out          ; 3.51             ;
 +--------------------------+------------------+
 
@@ -236,17 +236,17 @@ applicable agreement for further details.
 +-------------------------------------------+-------------------+--------------+-------------+--------------+---------+-----------+-----------+------+--------------+----------------------------------------------------------------------------------------------------+--------------+
 ; Compilation Hierarchy Node                ; LC Combinationals ; LC Registers ; Memory Bits ; DSP Elements ; DSP 9x9 ; DSP 18x18 ; DSP 36x36 ; Pins ; Virtual Pins ; Full Hierarchy Name                                                                                ; Library Name ;
 +-------------------------------------------+-------------------+--------------+-------------+--------------+---------+-----------+-----------+------+--------------+----------------------------------------------------------------------------------------------------+--------------+
-; |fastica                                  ; 1626 (96)         ; 718 (90)     ; 2048        ; 68           ; 0       ; 34        ; 0         ; 68   ; 0            ; |fastica                                                                                           ; work         ;
+; |fastica                                  ; 1583 (96)         ; 810 (90)     ; 2048        ; 68           ; 0       ; 34        ; 0         ; 68   ; 0            ; |fastica                                                                                           ; work         ;
 ;    |RAM:ws_ram|                           ; 73 (73)           ; 110 (110)    ; 2048        ; 0            ; 0       ; 0         ; 0         ; 0    ; 0            ; |fastica|RAM:ws_ram                                                                                ; work         ;
 ;       |altsyncram:ram_rtl_0|              ; 0 (0)             ; 0 (0)        ; 2048        ; 0            ; 0       ; 0         ; 0         ; 0    ; 0            ; |fastica|RAM:ws_ram|altsyncram:ram_rtl_0                                                           ; work         ;
 ;          |altsyncram_k0h1:auto_generated| ; 0 (0)             ; 0 (0)        ; 2048        ; 0            ; 0       ; 0         ; 0         ; 0    ; 0            ; |fastica|RAM:ws_ram|altsyncram:ram_rtl_0|altsyncram_k0h1:auto_generated                            ; work         ;
-;    |controller:C|                         ; 42 (42)           ; 22 (22)      ; 0           ; 0            ; 0       ; 0         ; 0         ; 0    ; 0            ; |fastica|controller:C                                                                              ; work         ;
-;    |convergence_check:CC|                 ; 154 (154)         ; 0 (0)        ; 0           ; 4            ; 0       ; 2         ; 0         ; 0    ; 0            ; |fastica|convergence_check:CC                                                                      ; work         ;
+;    |controller:C|                         ; 41 (41)           ; 22 (22)      ; 0           ; 0            ; 0       ; 0         ; 0         ; 0    ; 0            ; |fastica|controller:C                                                                              ; work         ;
+;    |convergence_check:CC|                 ; 103 (103)         ; 92 (92)      ; 0           ; 4            ; 0       ; 2         ; 0         ; 0    ; 0            ; |fastica|convergence_check:CC                                                                      ; work         ;
 ;       |lpm_mult:Mult0|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|convergence_check:CC|lpm_mult:Mult0                                                       ; work         ;
 ;          |mult_t9t:auto_generated|        ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|convergence_check:CC|lpm_mult:Mult0|mult_t9t:auto_generated                               ; work         ;
 ;       |lpm_mult:Mult1|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|convergence_check:CC|lpm_mult:Mult1                                                       ; work         ;
 ;          |mult_t9t:auto_generated|        ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|convergence_check:CC|lpm_mult:Mult1|mult_t9t:auto_generated                               ; work         ;
-;    |normalization_unit:NU|                ; 659 (231)         ; 351 (351)    ; 0           ; 40           ; 0       ; 20        ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU                                                                     ; work         ;
+;    |normalization_unit:NU|                ; 667 (231)         ; 351 (351)    ; 0           ; 40           ; 0       ; 20        ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU                                                                     ; work         ;
 ;       |lpm_mult:Mult0|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|lpm_mult:Mult0                                                      ; work         ;
 ;          |mult_t9t:auto_generated|        ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|lpm_mult:Mult0|mult_t9t:auto_generated                              ; work         ;
 ;       |lpm_mult:Mult1|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|lpm_mult:Mult1                                                      ; work         ;
@@ -259,10 +259,10 @@ applicable agreement for further details.
 ;          |mult_v9t:auto_generated|        ; 32 (32)           ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|lpm_mult:Mult4|mult_v9t:auto_generated                              ; work         ;
 ;       |lpm_mult:Mult5|                    ; 32 (0)            ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|lpm_mult:Mult5                                                      ; work         ;
 ;          |mult_v9t:auto_generated|        ; 32 (32)           ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|lpm_mult:Mult5|mult_v9t:auto_generated                              ; work         ;
-;       |rsqrt:reciprocal_square_root|      ; 188 (142)         ; 0 (0)        ; 0           ; 4            ; 0       ; 2         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root                                        ; work         ;
+;       |rsqrt:reciprocal_square_root|      ; 196 (150)         ; 0 (0)        ; 0           ; 4            ; 0       ; 2         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root                                        ; work         ;
 ;          |lpm_mult:Mult0|                 ; 46 (0)            ; 0 (0)        ; 0           ; 4            ; 0       ; 2         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0                         ; work         ;
 ;             |mult_4at:auto_generated|     ; 46 (46)           ; 0 (0)        ; 0           ; 4            ; 0       ; 2         ; 0         ; 0    ; 0            ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0|mult_4at:auto_generated ; work         ;
-;    |processing_element:PE|                ; 602 (197)         ; 145 (145)    ; 0           ; 24           ; 0       ; 12        ; 0         ; 0    ; 0            ; |fastica|processing_element:PE                                                                     ; work         ;
+;    |processing_element:PE|                ; 603 (197)         ; 145 (145)    ; 0           ; 24           ; 0       ; 12        ; 0         ; 0    ; 0            ; |fastica|processing_element:PE                                                                     ; work         ;
 ;       |lpm_mult:Mult0|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|lpm_mult:Mult0                                                      ; work         ;
 ;          |mult_t9t:auto_generated|        ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|lpm_mult:Mult0|mult_t9t:auto_generated                              ; work         ;
 ;       |lpm_mult:Mult1|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|lpm_mult:Mult1                                                      ; work         ;
@@ -271,10 +271,10 @@ applicable agreement for further details.
 ;          |mult_t9t:auto_generated|        ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|lpm_mult:Mult2|mult_t9t:auto_generated                              ; work         ;
 ;       |lpm_mult:Mult3|                    ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|lpm_mult:Mult3                                                      ; work         ;
 ;          |mult_t9t:auto_generated|        ; 0 (0)             ; 0 (0)        ; 0           ; 2            ; 0       ; 1         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|lpm_mult:Mult3|mult_t9t:auto_generated                              ; work         ;
-;       |sech2:sech2_t|                     ; 263 (191)         ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|sech2:sech2_t                                                       ; work         ;
+;       |sech2:sech2_t|                     ; 260 (188)         ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|sech2:sech2_t                                                       ; work         ;
 ;          |lpm_mult:Mult0|                 ; 72 (0)            ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|sech2:sech2_t|lpm_mult:Mult0                                        ; work         ;
 ;             |mult_s9t:auto_generated|     ; 72 (72)           ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|sech2:sech2_t|lpm_mult:Mult0|mult_s9t:auto_generated                ; work         ;
-;       |tanh:tanh_t|                       ; 142 (73)          ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|tanh:tanh_t                                                         ; work         ;
+;       |tanh:tanh_t|                       ; 146 (77)          ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|tanh:tanh_t                                                         ; work         ;
 ;          |lpm_mult:Mult0|                 ; 69 (0)            ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|tanh:tanh_t|lpm_mult:Mult0                                          ; work         ;
 ;             |mult_s9t:auto_generated|     ; 69 (69)           ; 0 (0)        ; 0           ; 8            ; 0       ; 4         ; 0         ; 0    ; 0            ; |fastica|processing_element:PE|tanh:tanh_t|lpm_mult:Mult0|mult_s9t:auto_generated                  ; work         ;
 +-------------------------------------------+-------------------+--------------+-------------+--------------+---------+-----------+-----------+------+--------------+----------------------------------------------------------------------------------------------------+--------------+
@@ -336,10 +336,13 @@ Encoding Type:  One-Hot
 +-------------------------------------------+-----------------------------------------------------+
 ; Register name                             ; Reason for Removal                                  ;
 +-------------------------------------------+-----------------------------------------------------+
+; convergence_check:CC|dot_reg[0]           ; Stuck at GND due to stuck port data_in              ;
+; convergence_check:CC|plus_dot_reg[0]      ; Stuck at GND due to stuck port data_in              ;
 ; normalization_unit:NU|p3_reg[0][0]        ; Stuck at GND due to stuck port data_in              ;
 ; normalization_unit:NU|p3_reg[1][0]        ; Stuck at GND due to stuck port data_in              ;
 ; normalization_unit:NU|sum_2_reg[0]        ; Stuck at GND due to stuck port data_in              ;
 ; processing_element:PE|p1_reg[0]           ; Stuck at GND due to stuck port data_in              ;
+; convergence_check:CC|minus_dot_reg[0]     ; Stuck at GND due to stuck port data_in              ;
 ; p2_in[0][0]                               ; Merged with p2_in[1][0]                             ;
 ; normalization_unit:NU|p2_reg[0][0]        ; Merged with p2_in[1][0]                             ;
 ; normalization_unit:NU|p2_reg[0][31]       ; Merged with p2_in[0][31]                            ;
@@ -415,19 +418,24 @@ Encoding Type:  One-Hot
 ; normalization_unit:NU|p3_reg[0][1]        ; Stuck at GND due to stuck port data_in              ;
 ; normalization_unit:NU|p3_reg[1][1]        ; Stuck at GND due to stuck port data_in              ;
 ; normalization_unit:NU|w_rnorm_reg[28..30] ; Merged with normalization_unit:NU|w_rnorm_reg[31]   ;
+; convergence_check:CC|minus_dot_reg[1]     ; Merged with convergence_check:CC|plus_dot_reg[1]    ;
+; convergence_check:CC|minus_dot_reg[2]     ; Lost fanout                                         ;
 ; normalization_unit:NU|sum_2_reg[1..21]    ; Lost fanout                                         ;
+; convergence_check:CC|plus_dot_reg[1,2]    ; Lost fanout                                         ;
 ; sum_1_in[28..31]                          ; Lost fanout                                         ;
-; Total Number of Removed Registers = 106   ;                                                     ;
+; Total Number of Removed Registers = 113   ;                                                     ;
 +-------------------------------------------+-----------------------------------------------------+
 
 
-+-------------------------------------------------------------------------------+
-; Removed Registers Triggering Further Register Optimizations                   ;
-+---------------+--------------------+------------------------------------------+
-; Register name ; Reason for Removal ; Registers Removed due to This Register   ;
-+---------------+--------------------+------------------------------------------+
-; sum_1_in[31]  ; Lost Fanouts       ; sum_1_in[30], sum_1_in[29], sum_1_in[28] ;
-+---------------+--------------------+------------------------------------------+
++--------------------------------------------------------------------------------------------------------+
+; Removed Registers Triggering Further Register Optimizations                                            ;
++---------------------------------+---------------------------+------------------------------------------+
+; Register name                   ; Reason for Removal        ; Registers Removed due to This Register   ;
++---------------------------------+---------------------------+------------------------------------------+
+; sum_1_in[31]                    ; Lost Fanouts              ; sum_1_in[30], sum_1_in[29], sum_1_in[28] ;
+; convergence_check:CC|dot_reg[0] ; Stuck at GND              ; convergence_check:CC|plus_dot_reg[0]     ;
+;                                 ; due to stuck port data_in ;                                          ;
++---------------------------------+---------------------------+------------------------------------------+
 
 
 +------------------------------------------------------+
@@ -435,10 +443,10 @@ Encoding Type:  One-Hot
 +----------------------------------------------+-------+
 ; Statistic                                    ; Value ;
 +----------------------------------------------+-------+
-; Total registers                              ; 718   ;
+; Total registers                              ; 810   ;
 ; Number of registers using Synchronous Clear  ; 69    ;
 ; Number of registers using Synchronous Load   ; 62    ;
-; Number of registers using Asynchronous Clear ; 615   ;
+; Number of registers using Asynchronous Clear ; 707   ;
 ; Number of registers using Asynchronous Load  ; 0     ;
 ; Number of registers using Clock Enable       ; 299   ;
 ; Number of registers using Preset             ; 0     ;
@@ -522,28 +530,28 @@ Encoding Type:  One-Hot
 +--------------------+-----------+---------------+----------------------+------------------------+------------+-------------------------------------------------------------------+
 ; Multiplexer Inputs ; Bus Width ; Baseline Area ; Area if Restructured ; Saving if Restructured ; Registered ; Example Multiplexer Output                                        ;
 +--------------------+-----------+---------------+----------------------+------------------------+------------+-------------------------------------------------------------------+
-; 4:1                ; 78 bits   ; 156 LEs       ; 156 LEs              ; 0 LEs                  ; Yes        ; |fastica|p2_in[0][17]                                             ;
-; 5:1                ; 7 bits    ; 21 LEs        ; 7 LEs                ; 14 LEs                 ; Yes        ; |fastica|controller:C|counter[1]                                  ;
-; 4:1                ; 32 bits   ; 64 LEs        ; 64 LEs               ; 0 LEs                  ; Yes        ; |fastica|RAM:ws_ram|dataout[8]                                    ;
-; 4:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sum_1_out[21]                      ;
-; 3:1                ; 14 bits   ; 28 LEs        ; 28 LEs               ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b[6]  ;
+; 4:1                ; 78 bits   ; 156 LEs       ; 156 LEs              ; 0 LEs                  ; Yes        ; |fastica|p2_in[1][8]                                              ;
+; 5:1                ; 7 bits    ; 21 LEs        ; 7 LEs                ; 14 LEs                 ; Yes        ; |fastica|controller:C|counter[6]                                  ;
+; 4:1                ; 32 bits   ; 64 LEs        ; 64 LEs               ; 0 LEs                  ; Yes        ; |fastica|RAM:ws_ram|dataout[28]                                   ;
+; 4:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sum_1_out[15]                      ;
+; 3:1                ; 14 bits   ; 28 LEs        ; 28 LEs               ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b[25] ;
 ; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b     ;
 ; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b     ;
-; 3:1                ; 3 bits    ; 6 LEs         ; 6 LEs                ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a                    ;
-; 3:1                ; 3 bits    ; 6 LEs         ; 6 LEs                ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a                    ;
-; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |fastica|processing_element:PE|tanh:tanh_t|b[13]                  ;
+; 3:1                ; 3 bits    ; 6 LEs         ; 6 LEs                ; 0 LEs                  ; No         ; |fastica|processing_element:PE|tanh:tanh_t|a                      ;
+; 3:1                ; 3 bits    ; 6 LEs         ; 6 LEs                ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|b                    ;
+; 3:1                ; 2 bits    ; 4 LEs         ; 4 LEs                ; 0 LEs                  ; No         ; |fastica|processing_element:PE|tanh:tanh_t|b[1]                   ;
 ; 3:1                ; 5 bits    ; 10 LEs        ; 10 LEs               ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a                    ;
-; 4:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b[24] ;
-; 5:1                ; 12 bits   ; 36 LEs        ; 36 LEs               ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b[12] ;
+; 4:1                ; 16 bits   ; 32 LEs        ; 32 LEs               ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b[4]  ;
+; 5:1                ; 12 bits   ; 36 LEs        ; 36 LEs               ; 0 LEs                  ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|b[35] ;
 ; 6:1                ; 2 bits    ; 8 LEs         ; 4 LEs                ; 4 LEs                  ; No         ; |fastica|processing_element:PE|tanh:tanh_t|b[43]                  ;
-; 5:1                ; 2 bits    ; 6 LEs         ; 6 LEs                ; 0 LEs                  ; No         ; |fastica|controller:C|Selector5                                   ;
-; 7:1                ; 32 bits   ; 128 LEs       ; 32 LEs               ; 96 LEs                 ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|e[51] ;
-; 8:1                ; 18 bits   ; 90 LEs        ; 90 LEs               ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a[9]                 ;
+; 5:1                ; 2 bits    ; 6 LEs         ; 6 LEs                ; 0 LEs                  ; No         ; |fastica|controller:C|Selector4                                   ;
+; 7:1                ; 32 bits   ; 128 LEs       ; 32 LEs               ; 96 LEs                 ; No         ; |fastica|normalization_unit:NU|rsqrt:reciprocal_square_root|e[40] ;
+; 8:1                ; 18 bits   ; 90 LEs        ; 90 LEs               ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|b[19]                ;
 ; 8:1                ; 14 bits   ; 70 LEs        ; 56 LEs               ; 14 LEs                 ; No         ; |fastica|processing_element:PE|tanh:tanh_t|a[17]                  ;
-; 9:1                ; 24 bits   ; 144 LEs       ; 144 LEs              ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a[14]                ;
-; 10:1               ; 17 bits   ; 102 LEs       ; 102 LEs              ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|b[6]                 ;
-; 11:1               ; 2 bits    ; 14 LEs        ; 12 LEs               ; 2 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a[3]                 ;
-; 9:1                ; 6 bits    ; 36 LEs        ; 12 LEs               ; 24 LEs                 ; No         ; |fastica|controller:C|Selector16                                  ;
+; 9:1                ; 24 bits   ; 144 LEs       ; 144 LEs              ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a[19]                ;
+; 10:1               ; 17 bits   ; 102 LEs       ; 102 LEs              ; 0 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|a[17]                ;
+; 11:1               ; 2 bits    ; 14 LEs        ; 12 LEs               ; 2 LEs                  ; No         ; |fastica|processing_element:PE|sech2:sech2_t|b[3]                 ;
+; 9:1                ; 6 bits    ; 36 LEs        ; 12 LEs               ; 24 LEs                 ; No         ; |fastica|controller:C|Selector14                                  ;
 +--------------------+-----------+---------------+----------------------+------------------------+------------+-------------------------------------------------------------------+
 
 
@@ -698,6 +706,41 @@ Note: In order to hide this table in the UI and the text report file, please set
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
++--------------------------------------------------------------------------------------------------------------------+
+; Parameter Settings for Inferred Entity Instance: normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0 ;
++------------------------------------------------+---------------+---------------------------------------------------+
+; Parameter Name                                 ; Value         ; Type                                              ;
++------------------------------------------------+---------------+---------------------------------------------------+
+; AUTO_CARRY_CHAINS                              ; ON            ; AUTO_CARRY                                        ;
+; IGNORE_CARRY_BUFFERS                           ; OFF           ; IGNORE_CARRY                                      ;
+; AUTO_CASCADE_CHAINS                            ; ON            ; AUTO_CASCADE                                      ;
+; IGNORE_CASCADE_BUFFERS                         ; OFF           ; IGNORE_CASCADE                                    ;
+; LPM_WIDTHA                                     ; 17            ; Untyped                                           ;
+; LPM_WIDTHB                                     ; 32            ; Untyped                                           ;
+; LPM_WIDTHP                                     ; 49            ; Untyped                                           ;
+; LPM_WIDTHR                                     ; 49            ; Untyped                                           ;
+; LPM_WIDTHS                                     ; 1             ; Untyped                                           ;
+; LPM_REPRESENTATION                             ; SIGNED        ; Untyped                                           ;
+; LPM_PIPELINE                                   ; 0             ; Untyped                                           ;
+; LATENCY                                        ; 0             ; Untyped                                           ;
+; INPUT_A_IS_CONSTANT                            ; NO            ; Untyped                                           ;
+; INPUT_B_IS_CONSTANT                            ; NO            ; Untyped                                           ;
+; USE_EAB                                        ; OFF           ; Untyped                                           ;
+; MAXIMIZE_SPEED                                 ; 5             ; Untyped                                           ;
+; DEVICE_FAMILY                                  ; Cyclone IV GX ; Untyped                                           ;
+; CARRY_CHAIN                                    ; MANUAL        ; Untyped                                           ;
+; APEX20K_TECHNOLOGY_MAPPER                      ; LUT           ; TECH_MAPPER_APEX20K                               ;
+; DEDICATED_MULTIPLIER_CIRCUITRY                 ; AUTO          ; Untyped                                           ;
+; DEDICATED_MULTIPLIER_MIN_INPUT_WIDTH_FOR_AUTO  ; 0             ; Untyped                                           ;
+; DEDICATED_MULTIPLIER_MIN_OUTPUT_WIDTH_FOR_AUTO ; 0             ; Untyped                                           ;
+; CBXI_PARAMETER                                 ; mult_4at      ; Untyped                                           ;
+; INPUT_A_FIXED_VALUE                            ; Bx            ; Untyped                                           ;
+; INPUT_B_FIXED_VALUE                            ; Bx            ; Untyped                                           ;
+; USE_AHDL_IMPLEMENTATION                        ; OFF           ; Untyped                                           ;
++------------------------------------------------+---------------+---------------------------------------------------+
+Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
+
+
 +--------------------------------------------------------------------------------------+
 ; Parameter Settings for Inferred Entity Instance: convergence_check:CC|lpm_mult:Mult0 ;
 +------------------------------------------------+---------------+---------------------+
@@ -765,41 +808,6 @@ Note: In order to hide this table in the UI and the text report file, please set
 ; INPUT_B_FIXED_VALUE                            ; Bx            ; Untyped             ;
 ; USE_AHDL_IMPLEMENTATION                        ; OFF           ; Untyped             ;
 +------------------------------------------------+---------------+---------------------+
-Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
-
-
-+--------------------------------------------------------------------------------------------------------------------+
-; Parameter Settings for Inferred Entity Instance: normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0 ;
-+------------------------------------------------+---------------+---------------------------------------------------+
-; Parameter Name                                 ; Value         ; Type                                              ;
-+------------------------------------------------+---------------+---------------------------------------------------+
-; AUTO_CARRY_CHAINS                              ; ON            ; AUTO_CARRY                                        ;
-; IGNORE_CARRY_BUFFERS                           ; OFF           ; IGNORE_CARRY                                      ;
-; AUTO_CASCADE_CHAINS                            ; ON            ; AUTO_CASCADE                                      ;
-; IGNORE_CASCADE_BUFFERS                         ; OFF           ; IGNORE_CASCADE                                    ;
-; LPM_WIDTHA                                     ; 17            ; Untyped                                           ;
-; LPM_WIDTHB                                     ; 32            ; Untyped                                           ;
-; LPM_WIDTHP                                     ; 49            ; Untyped                                           ;
-; LPM_WIDTHR                                     ; 49            ; Untyped                                           ;
-; LPM_WIDTHS                                     ; 1             ; Untyped                                           ;
-; LPM_REPRESENTATION                             ; SIGNED        ; Untyped                                           ;
-; LPM_PIPELINE                                   ; 0             ; Untyped                                           ;
-; LATENCY                                        ; 0             ; Untyped                                           ;
-; INPUT_A_IS_CONSTANT                            ; NO            ; Untyped                                           ;
-; INPUT_B_IS_CONSTANT                            ; NO            ; Untyped                                           ;
-; USE_EAB                                        ; OFF           ; Untyped                                           ;
-; MAXIMIZE_SPEED                                 ; 5             ; Untyped                                           ;
-; DEVICE_FAMILY                                  ; Cyclone IV GX ; Untyped                                           ;
-; CARRY_CHAIN                                    ; MANUAL        ; Untyped                                           ;
-; APEX20K_TECHNOLOGY_MAPPER                      ; LUT           ; TECH_MAPPER_APEX20K                               ;
-; DEDICATED_MULTIPLIER_CIRCUITRY                 ; AUTO          ; Untyped                                           ;
-; DEDICATED_MULTIPLIER_MIN_INPUT_WIDTH_FOR_AUTO  ; 0             ; Untyped                                           ;
-; DEDICATED_MULTIPLIER_MIN_OUTPUT_WIDTH_FOR_AUTO ; 0             ; Untyped                                           ;
-; CBXI_PARAMETER                                 ; mult_4at      ; Untyped                                           ;
-; INPUT_A_FIXED_VALUE                            ; Bx            ; Untyped                                           ;
-; INPUT_B_FIXED_VALUE                            ; Bx            ; Untyped                                           ;
-; USE_AHDL_IMPLEMENTATION                        ; OFF           ; Untyped                                           ;
-+------------------------------------------------+---------------+---------------------------------------------------+
 Note: In order to hide this table in the UI and the text report file, please set the "Show Parameter Settings in Synthesis Report" option in "Analysis and Synthesis Settings -> More Settings" to "Off".
 
 
@@ -1201,6 +1209,17 @@ Note: In order to hide this table in the UI and the text report file, please set
 ;     -- DEDICATED_MULTIPLIER_CIRCUITRY ; AUTO                                                              ;
 ;     -- INPUT_A_FIXED_VALUE            ; Bx                                                                ;
 ;     -- INPUT_B_FIXED_VALUE            ; Bx                                                                ;
+; Entity Instance                       ; normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0 ;
+;     -- LPM_WIDTHA                     ; 17                                                                ;
+;     -- LPM_WIDTHB                     ; 32                                                                ;
+;     -- LPM_WIDTHP                     ; 49                                                                ;
+;     -- LPM_REPRESENTATION             ; SIGNED                                                            ;
+;     -- INPUT_A_IS_CONSTANT            ; NO                                                                ;
+;     -- INPUT_B_IS_CONSTANT            ; NO                                                                ;
+;     -- USE_EAB                        ; OFF                                                               ;
+;     -- DEDICATED_MULTIPLIER_CIRCUITRY ; AUTO                                                              ;
+;     -- INPUT_A_FIXED_VALUE            ; Bx                                                                ;
+;     -- INPUT_B_FIXED_VALUE            ; Bx                                                                ;
 ; Entity Instance                       ; convergence_check:CC|lpm_mult:Mult0                               ;
 ;     -- LPM_WIDTHA                     ; 16                                                                ;
 ;     -- LPM_WIDTHB                     ; 16                                                                ;
@@ -1216,17 +1235,6 @@ Note: In order to hide this table in the UI and the text report file, please set
 ;     -- LPM_WIDTHA                     ; 16                                                                ;
 ;     -- LPM_WIDTHB                     ; 16                                                                ;
 ;     -- LPM_WIDTHP                     ; 32                                                                ;
-;     -- LPM_REPRESENTATION             ; SIGNED                                                            ;
-;     -- INPUT_A_IS_CONSTANT            ; NO                                                                ;
-;     -- INPUT_B_IS_CONSTANT            ; NO                                                                ;
-;     -- USE_EAB                        ; OFF                                                               ;
-;     -- DEDICATED_MULTIPLIER_CIRCUITRY ; AUTO                                                              ;
-;     -- INPUT_A_FIXED_VALUE            ; Bx                                                                ;
-;     -- INPUT_B_FIXED_VALUE            ; Bx                                                                ;
-; Entity Instance                       ; normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0 ;
-;     -- LPM_WIDTHA                     ; 17                                                                ;
-;     -- LPM_WIDTHB                     ; 32                                                                ;
-;     -- LPM_WIDTHP                     ; 49                                                                ;
 ;     -- LPM_REPRESENTATION             ; SIGNED                                                            ;
 ;     -- INPUT_A_IS_CONSTANT            ; NO                                                                ;
 ;     -- INPUT_B_IS_CONSTANT            ; NO                                                                ;
@@ -1381,7 +1389,7 @@ Note: In order to hide this table in the UI and the text report file, please set
 Info: *******************************************************************
 Info: Running Quartus II 64-Bit Analysis & Synthesis
     Info: Version 13.1.0 Build 162 10/23/2013 SJ Web Edition
-    Info: Processing started: Mon Dec 14 11:15:09 2015
+    Info: Processing started: Mon Dec 14 13:42:22 2015
 Info: Command: quartus_map --read_settings_files=on --write_settings_files=off vlsi_dsp_project -c vlsi_dsp_project
 Warning (20028): Parallel compilation is not licensed and has been disabled
 Info (12021): Found 2 design units, including 1 entities, in source file fastica_functional.vhd
@@ -1431,7 +1439,9 @@ Warning (10036): Verilog HDL or VHDL warning at normalization_unit.vhd(44): obje
 Warning (10036): Verilog HDL or VHDL warning at normalization_unit.vhd(47): object "end_token_reg_3" assigned a value but never read
 Info (12128): Elaborating entity "rsqrt" for hierarchy "normalization_unit:NU|rsqrt:reciprocal_square_root"
 Info (12128): Elaborating entity "convergence_check" for hierarchy "convergence_check:CC"
+Warning (10492): VHDL Process Statement warning at convergence_check.vhd(50): signal "valid_w_reg_3" is read inside the Process Statement but isn't in the Process Statement's sensitivity list
 Info (12128): Elaborating entity "controller" for hierarchy "controller:C"
+Warning (10492): VHDL Process Statement warning at controller.vhd(110): signal "counter" is read inside the Process Statement but isn't in the Process Statement's sensitivity list
 Info (12128): Elaborating entity "RAM" for hierarchy "RAM:ws_ram"
 Warning (10350): VHDL warning at standard.vhd(71): ignored VHDL standard library NOW function, which is not supported for synthesis
 Warning (276020): Inferred RAM node "RAM:ws_ram|ram_rtl_0" from synchronous design logic.  Pass-through logic has been added to match the read-during-write behavior of the original design.
@@ -1455,9 +1465,9 @@ Info (19000): Inferred 1 megafunctions from design logic
 Info (278001): Inferred 15 megafunctions from design logic
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "normalization_unit:NU|Mult5"
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "normalization_unit:NU|Mult4"
+    Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "normalization_unit:NU|rsqrt:reciprocal_square_root|Mult0"
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "convergence_check:CC|Mult0"
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "convergence_check:CC|Mult1"
-    Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "normalization_unit:NU|rsqrt:reciprocal_square_root|Mult0"
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "normalization_unit:NU|Mult2"
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "normalization_unit:NU|Mult3"
     Info (278003): Inferred multiplier megafunction ("lpm_mult") from the following logic: "processing_element:PE|Mult3"
@@ -1500,19 +1510,6 @@ Info (12133): Instantiated megafunction "normalization_unit:NU|lpm_mult:Mult5" w
     Info (12134): Parameter "MAXIMIZE_SPEED" = "5"
 Info (12021): Found 1 design units, including 1 entities, in source file db/mult_v9t.tdf
     Info (12023): Found entity 1: mult_v9t
-Info (12130): Elaborated megafunction instantiation "convergence_check:CC|lpm_mult:Mult0"
-Info (12133): Instantiated megafunction "convergence_check:CC|lpm_mult:Mult0" with the following parameter:
-    Info (12134): Parameter "LPM_WIDTHA" = "16"
-    Info (12134): Parameter "LPM_WIDTHB" = "16"
-    Info (12134): Parameter "LPM_WIDTHP" = "32"
-    Info (12134): Parameter "LPM_WIDTHR" = "32"
-    Info (12134): Parameter "LPM_WIDTHS" = "1"
-    Info (12134): Parameter "LPM_REPRESENTATION" = "SIGNED"
-    Info (12134): Parameter "INPUT_A_IS_CONSTANT" = "NO"
-    Info (12134): Parameter "INPUT_B_IS_CONSTANT" = "NO"
-    Info (12134): Parameter "MAXIMIZE_SPEED" = "5"
-Info (12021): Found 1 design units, including 1 entities, in source file db/mult_t9t.tdf
-    Info (12023): Found entity 1: mult_t9t
 Info (12130): Elaborated megafunction instantiation "normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0"
 Info (12133): Instantiated megafunction "normalization_unit:NU|rsqrt:reciprocal_square_root|lpm_mult:Mult0" with the following parameter:
     Info (12134): Parameter "LPM_WIDTHA" = "17"
@@ -1526,6 +1523,19 @@ Info (12133): Instantiated megafunction "normalization_unit:NU|rsqrt:reciprocal_
     Info (12134): Parameter "MAXIMIZE_SPEED" = "5"
 Info (12021): Found 1 design units, including 1 entities, in source file db/mult_4at.tdf
     Info (12023): Found entity 1: mult_4at
+Info (12130): Elaborated megafunction instantiation "convergence_check:CC|lpm_mult:Mult0"
+Info (12133): Instantiated megafunction "convergence_check:CC|lpm_mult:Mult0" with the following parameter:
+    Info (12134): Parameter "LPM_WIDTHA" = "16"
+    Info (12134): Parameter "LPM_WIDTHB" = "16"
+    Info (12134): Parameter "LPM_WIDTHP" = "32"
+    Info (12134): Parameter "LPM_WIDTHR" = "32"
+    Info (12134): Parameter "LPM_WIDTHS" = "1"
+    Info (12134): Parameter "LPM_REPRESENTATION" = "SIGNED"
+    Info (12134): Parameter "INPUT_A_IS_CONSTANT" = "NO"
+    Info (12134): Parameter "INPUT_B_IS_CONSTANT" = "NO"
+    Info (12134): Parameter "MAXIMIZE_SPEED" = "5"
+Info (12021): Found 1 design units, including 1 entities, in source file db/mult_t9t.tdf
+    Info (12023): Found entity 1: mult_t9t
 Info (12130): Elaborated megafunction instantiation "normalization_unit:NU|lpm_mult:Mult2"
 Info (12133): Instantiated megafunction "normalization_unit:NU|lpm_mult:Mult2" with the following parameter:
     Info (12134): Parameter "LPM_WIDTHA" = "31"
@@ -1581,19 +1591,19 @@ Info (13003): DEV_CLRn pin will set, and not reset, register with preset signal 
 Warning (13024): Output pins are stuck at VCC or GND
     Warning (13410): Pin "done" is stuck at GND
 Info (286030): Timing-Driven Synthesis is running
-Info (17049): 25 registers lost all their fanouts during netlist optimizations.
+Info (17049): 28 registers lost all their fanouts during netlist optimizations.
 Info (16010): Generating hard_block partition "hard_block:auto_generated_inst"
     Info (16011): Adding 0 node(s), including 0 DDIO, 0 PLL, 0 transceiver and 0 LCELL
-Info (21057): Implemented 2150 device resources after synthesis - the final resource count might be different
+Info (21057): Implemented 2140 device resources after synthesis - the final resource count might be different
     Info (21058): Implemented 35 input pins
     Info (21059): Implemented 33 output pins
-    Info (21061): Implemented 1982 logic cells
+    Info (21061): Implemented 1972 logic cells
     Info (21064): Implemented 32 RAM segments
     Info (21062): Implemented 68 DSP elements
-Info: Quartus II 64-Bit Analysis & Synthesis was successful. 0 errors, 10 warnings
-    Info: Peak virtual memory: 655 megabytes
-    Info: Processing ended: Mon Dec 14 11:15:30 2015
-    Info: Elapsed time: 00:00:21
-    Info: Total CPU time (on all processors): 00:00:15
+Info: Quartus II 64-Bit Analysis & Synthesis was successful. 0 errors, 12 warnings
+    Info: Peak virtual memory: 639 megabytes
+    Info: Processing ended: Mon Dec 14 13:42:44 2015
+    Info: Elapsed time: 00:00:22
+    Info: Total CPU time (on all processors): 00:00:16
 
 

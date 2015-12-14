@@ -83,7 +83,7 @@ BEGIN
 				normalization_end_token <= '0';
 
 			WHEN rotating_done => 
-				valid_w <= '1';
+				valid_w <= '0';
 				valid_p1 <= '0';
 				RAM_we <= '0';
 				rotation_start_token <= '0';
@@ -107,14 +107,14 @@ BEGIN
 				rotation_start_token <= '0';
 				rotation_end_token <= '1';
 				normalization_start_token <= '0';
-				IF (counter = normalization_latency - 2) THEN
+				IF (counter = normalization_latency-2) THEN
 					normalization_end_token <= '1';
 				ELSE 
 					normalization_end_token <= '0';
 				END IF;
 
 			WHEN normalizing_done => 
-				valid_w <= '0';
+				valid_w <= '1';
 				valid_p1 <= '1';
 				RAM_we <= '0';
 				rotation_start_token <= '0';
@@ -129,7 +129,7 @@ BEGIN
 				rotation_start_token <= '0';
 				rotation_end_token <= '1';
 				normalization_start_token <= '0';
-				normalization_end_token <= '1';
+				normalization_end_token <= '0';
 			  
 		END CASE;
 	END PROCESS;

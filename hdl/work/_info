@@ -4,7 +4,7 @@ K3
 cModel Technology
 dC:\altera\13.1
 Econtroller
-Z0 w1450113069
+Z0 w1450116873
 Z1 DPx4 work 10 parameters 0 22 hjdhKd2mVnHV@AHnNW1[]3
 Z2 DPx4 ieee 11 numeric_std 0 22 O3PF8EB`?j9=z7KT`fn941
 Z3 DPx3 std 6 textio 0 22 5>J:;AW>W0[[dW0I6EN1Q0
@@ -15,74 +15,74 @@ Z7 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd
 l0
 L11
 VYX;m>oS6cmeY;0SPnl8<M0
-!s100 zlHzN]dgJbf3[GhJ16_f^0
 Z8 OV;C;10.1d;51
 32
-!i10b 1
-Z9 !s108 1450113081.624000
+Z9 !s108 1450117538.594000
 Z10 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd|
 Z11 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/controller.vhd|
 Z12 o-work work -2002 -explicit -O0
 Z13 tExplicit 1
+!s100 zlHzN]dgJbf3[GhJ16_f^0
+!i10b 1
 Aarch
 R1
 R2
 R3
 R4
-Z14 DEx4 work 10 controller 0 22 YX;m>oS6cmeY;0SPnl8<M0
+DEx4 work 10 controller 0 22 YX;m>oS6cmeY;0SPnl8<M0
 l50
 L29
-V03NbmimDVH8`?_dB=VjF>3
-!s100 ZQEbghKOPPACkD?KYBc2E3
+VkizPi9EbGVX4f4]77AYGb1
+!s100 90I6FSFd^Q4GHVNe>FzTJ3
 R8
 32
-!i10b 1
 R9
 R10
 R11
 R12
 R13
+!i10b 1
 Econvergence_check
-Z15 w1450112326
+Z14 w1450117533
 R1
 R2
 R3
 R4
 R5
-Z16 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
-Z17 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
+Z15 8Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
+Z16 FY:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd
 l0
 L11
 VObSki4VPJSnz?YH]4^DeE2
+!s100 FZYY6F>GIJFHIEZ3SAn_Z1
 R8
 32
-Z18 !s108 1450112338.488000
-Z19 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd|
-Z20 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd|
+!i10b 1
+Z17 !s108 1450117538.863000
+Z18 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd|
+Z19 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/convergence_check.vhd|
 R12
 R13
-!s100 FZYY6F>GIJFHIEZ3SAn_Z1
-!i10b 1
 Aarch
 R1
 R2
 R3
 R4
-DEx4 work 17 convergence_check 0 22 ObSki4VPJSnz?YH]4^DeE2
-l34
+Z20 DEx4 work 17 convergence_check 0 22 ObSki4VPJSnz?YH]4^DeE2
+l39
 L23
-ViK=hTJ7z4nVPPB0_BMe0a1
+Vn_DblaWmGbn3>ANLFJ1eM3
+!s100 3Eci3oGO7FSae8;icI`I@0
 R8
 32
+!i10b 1
+R17
 R18
 R19
-R20
 R12
 R13
-!s100 QfLYKCB8HTkDFRI<?9Bmz1
-!i10b 1
 Efastica
-Z21 w1450107001
+Z21 w1450113454
 R1
 R2
 R3
@@ -95,7 +95,7 @@ L11
 VGdGE2m4TG`^GT50jWOcTh3
 R8
 32
-Z24 !s108 1450107009.088000
+Z24 !s108 1450113508.659000
 Z25 !s90 -reportprogress|300|-work|work|-2002|-explicit|Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
 Z26 !s107 Y:/_grad_school/_Fall2015/vlsi_dsp/project/hdl/fastica.vhd|
 R12
@@ -118,7 +118,7 @@ R25
 R26
 R12
 R13
-!s100 jA=[dIZZeCP:`S<O[TcE]2
+!s100 @7>e?T5oBFJneY>IoLKVK2
 !i10b 1
 Efastica_functional
 Z27 w1449855738

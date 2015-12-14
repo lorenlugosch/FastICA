@@ -45,18 +45,7 @@ ARCHITECTURE arch OF fastica IS
 
 BEGIN
 
-	---- if first iteration, use incoming signal
-	---- otherwise, read from RAM
-	--PROCESS(ws_select, RAM_out, ws)
-	--BEGIN
-	--	IF (ws_select = '1') THEN
-	--		ws_in(0) <= RAM_out(2*Q6_10.data_width-1 DOWNTO Q6_10.data_width);
-	--		ws_in(1) <= RAM_out(Q6_10.data_width-1 DOWNTO 0);
-	--	ELSE
-	--		ws_in <= ws;
-	--	END IF;
-	--END PROCESS;
-
+	-- feedback into systolic array
 	PROCESS(clock, reset)
 	BEGIN
 		IF (reset = '1') THEN
@@ -69,6 +58,7 @@ BEGIN
 		END IF;
 	END PROCESS;
 
+	-- initialize w
 	PROCESS(first_iteration, w_next_Q6_10)
 	BEGIN
 		IF (first_iteration = '1') THEN 
@@ -78,20 +68,6 @@ BEGIN
 			w_Q6_10 <= w_next_Q6_10;
 		END IF;
 	END PROCESS;
-
-	--PROCESS(rotation_start, p2_in, sum_1_in)
-	--BEGIN
-	--	IF (rotation_start = '1') THEN
-	--		p2_in_safe(0) <= (OTHERS => '0');
-	--		p2_in_safe(1) <= (OTHERS => '0');
-	--		sum_1_in_safe <= (OTHERS => '0');
-	--	ELSE 
-			--p2_in_safe(0) <= p2_in(0);
-			--p2_in_safe(1) <= p2_in(1);
-			--sum_1_in_safe <= sum_1_in;
-	--	END IF;
-	--END PROCESS;
-
 
 	PE: processing_element
 	PORT MAP(
