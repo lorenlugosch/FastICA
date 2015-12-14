@@ -105,6 +105,8 @@ void fastica() {
 
 	/* rotate, normalize, and repeat */
 	while(fabs(fabs(dot_product)-2097152) > EPSILON) {
+
+
 		/* update w */
 		for (n = 0; n < N; n++) {
 			w_Q6_10[n] = w_next_Q6_10[n];
@@ -116,24 +118,24 @@ void fastica() {
 			for (n = 0; n < N; n++) {
 				product_1[t] += multiply_Q6_10_by_Q6_10(w_Q6_10[n],whitened_signals[n][t]);
 			}
-
 		}
 
 		for (n = 0; n < N; n++) {
 			product_2[n] = 0; 
 			for (t = 0; t < T; t++) {
-				product_2[n] += multiply_Q6_10_by_Q6_10(whitened_signals[n][t], linear_tanh(product_1[t]));
-			}
+				product_2[n] += multiply_Q6_10_by_Q6_10(whitened_signals[n][t], linear_tanh(product_1[t])); 
+			}	
 		} 
 
 		sum_1 = 0;
 		for (t = 0; t < T; t++) {
 			sum_1 += linear_sech2(product_1[t]);
-		}
+		} 
 
 		for (n = 0; n < N; n++) {
 			// divide sum_1 by 2 (shift by 12 instead of 11), multiply w by 2
 			product_3[n] = multiply_Q6_10_by_Q6_10(w_Q6_10[n] << 1, (Q6_10)(sum_1 >> 12));
+			
 		}
 
 		for (n = 0; n < N; n++) {
@@ -145,12 +147,13 @@ void fastica() {
 		sum_2 = 0;
 		for (n = 0; n < N; n++) {
 			sum_2 += ((Q21_43)(multiply_Q6_10_by_Q6_10(w_next_Q6_10[n], w_next_Q6_10[n])))<<22;
-		}
+		} 
 		w_rnorm = rsqrt(sum_2);
+		
 		for (n = 0; n < N; n++) {
 			w_next_Q21_43[n] = multiply_Q11_21_by_Q11_21(w_rnorm, w_next_Q11_21[n]);
 			w_next_Q6_10[n] = (Q6_10)(w_next_Q21_43[n] >> 33);
-		}
+		} 
 
 		/* calculate convergence */ 
 		dot_product = 0;
@@ -163,5 +166,5 @@ void fastica() {
 int main() {
 	/* find unmixing vector */ 
 	fastica();
-	printf("The unmixing vector is : [%d %d]\n",w_Q6_10[0],w_Q6_10[1]);
+	printf("The unmixing vector is : [%d %d]\n",w_next_Q6_10[0],w_next_Q6_10[1]);
 }

@@ -1,4 +1,4 @@
-NAME=fixed_fastica_loop_pipelined
+NAME=fixed_fastica_openmp_3
 ifeq (&(NO_OPT),)
 	NO_OPT=1
 endif
