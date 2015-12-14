@@ -11,7 +11,7 @@
 		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|lpm_mult:Mult3" CBX_FILE_NAME="mult_t9t.tdf"/>
 		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|sech2:sech2_t|lpm_mult:Mult0" CBX_FILE_NAME="mult_s9t.tdf"/>
 		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|tanh:tanh_t|lpm_mult:Mult0" CBX_FILE_NAME="mult_s9t.tdf"/>
-		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|RAM:ws_ram|altsyncram:ram_rtl_0" CBX_FILE_NAME="altsyncram_hh41.tdf"/>
+		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|RAM:ws_ram|altsyncram:ram_rtl_0" CBX_FILE_NAME="altsyncram_k0h1.tdf"/>
 		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|convergence_check:CC|lpm_mult:Mult1" CBX_FILE_NAME="mult_t9t.tdf"/>
 		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|normalization_unit:NU|lpm_mult:Mult2" CBX_FILE_NAME="mult_q9t.tdf"/>
 		<CBX_INST_ENTRY INSTANCE_NAME="|fastica|processing_element:PE|lpm_mult:Mult0" CBX_FILE_NAME="mult_t9t.tdf"/>

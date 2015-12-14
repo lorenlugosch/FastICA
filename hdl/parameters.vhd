@@ -85,8 +85,6 @@ PACKAGE parameters IS
 
 	COMPONENT tanh IS
 		PORT(
-			--clock : IN STD_LOGIC;
-			--reset : IN STD_LOGIC;
 			p1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
 			tp : OUT SIGNED(Q6_10.data_width-1 DOWNTO 0)
 		);
@@ -94,8 +92,6 @@ PACKAGE parameters IS
 
 	COMPONENT sech2 IS
 		PORT(
-			--clock : IN STD_LOGIC;
-			--reset : IN STD_LOGIC;
 			p1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
 			sp : OUT SIGNED(Q11_21.data_width-1 DOWNTO 0)
 		);
@@ -103,8 +99,6 @@ PACKAGE parameters IS
 
 	COMPONENT rsqrt IS
 		PORT(
-			--clock : IN STD_LOGIC;
-			--reset : IN STD_LOGIC;
 			sum_2 : IN SIGNED(Q21_43.data_width-1 DOWNTO 0);
 			w_rnorm : OUT SIGNED(Q11_21.data_width-1 DOWNTO 0)
 		);
@@ -123,12 +117,14 @@ PACKAGE parameters IS
 			reset : IN STD_LOGIC;
 			converged : IN STD_LOGIC;
 			start : IN STD_LOGIC;
-			ws_select : OUT STD_LOGIC; -- 0 - external, 1 - from RAM
 			RAM_address : OUT INTEGER RANGE 0 TO T - 1;
 			valid_w : OUT STD_LOGIC;
 			valid_p1 : OUT STD_LOGIC;
 			RAM_we : OUT STD_LOGIC;
-			rotation_start : OUT STD_LOGIC
+			first_iteration : OUT STD_LOGIC;
+			rotation_start : OUT STD_LOGIC;
+			rotation_enable : OUT STD_LOGIC;
+			normalization_enable : OUT STD_LOGIC
 		);
 	END COMPONENT;
 
@@ -136,6 +132,7 @@ PACKAGE parameters IS
 		PORT(
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;
+			enable : IN STD_LOGIC;
 			ws : IN Q6_10_array_N;
 			w_Q6_10 : IN Q6_10_array_N;
 			sum_1_in : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
@@ -149,6 +146,7 @@ PACKAGE parameters IS
 		PORT(
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;
+			enable : IN STD_LOGIC;
 			w_Q6_10 : IN Q6_10_array_N;
 			sum_1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
 			p2 : IN Q11_21_array_N;
@@ -161,6 +159,7 @@ PACKAGE parameters IS
 			clock : IN STD_LOGIC;
 			reset : IN STD_LOGIC;
 			w_Q6_10 : IN Q6_10_array_N;
+			valid_w : IN STD_LOGIC;
 			w_next_Q6_10_in : IN Q6_10_array_N;
 			w_next_Q6_10_out : OUT Q6_10_array_N;
 			converged : OUT STD_LOGIC

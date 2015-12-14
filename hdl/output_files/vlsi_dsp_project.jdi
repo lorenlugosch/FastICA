@@ -1,8 +1,8 @@
 <sld_project_info>
   <project>
-    <hash md5_digest_80b="9e9642f24799686f0471"/>
+    <hash md5_digest_80b="89c303b5a463fba98fad"/>
   </project>
   <file_info>
-    <file device="EP4CGX50DF27C6" path="vlsi_dsp_project.sof" usercode="0xFFFFFFFF"/>
+    <file device="EP4CGX22CF19C6" path="vlsi_dsp_project.sof" usercode="0xFFFFFFFF"/>
   </file_info>
 </sld_project_info>

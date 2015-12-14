@@ -19,7 +19,7 @@ ARCHITECTURE arch OF fastica_tb IS
 	SIGNAL w : Q6_10_array_N;
 	SIGNAL done : STD_LOGIC;
 	SIGNAL start : STD_LOGIC;
-	SIGNAL ws : Q6_10_array_N;
+	SIGNAL ws : Q6_10_array_N := ((OTHERS => '0'),(OTHERS => '0'));
 	--SIGNAL ws1 : SIGNED(Q6_10.data_width-1 DOWNTO 0);
 
 
@@ -55,7 +55,7 @@ BEGIN
 		WAIT FOR clk_period / 2;
 
 		WAIT FOR clk_period;
-		WAIT FOR clk_period / 2;
+		--WAIT FOR clk_period / 2;
 
 		start <= '1';
 		FOR t IN 0 TO T-1 LOOP

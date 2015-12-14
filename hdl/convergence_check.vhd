@@ -15,6 +15,7 @@ ENTITY convergence_check IS
 		w_Q6_10 : IN Q6_10_array_N;
 		w_next_Q6_10_in : IN Q6_10_array_N;
 		w_next_Q6_10_out : OUT Q6_10_array_N;
+		valid_w : IN STD_LOGIC;
 		converged : OUT STD_LOGIC
 	);
 END ENTITY;
@@ -31,7 +32,7 @@ BEGIN
 	w_next_Q6_10_out <= w_next_Q6_10_in;
 
 	-- convergence check
-	PROCESS(w_next_Q6_10_in, w_Q6_10)
+	PROCESS(w_next_Q6_10_in, w_Q6_10, dot, abs_dot, abs_dot_2, valid_w)
 	BEGIN
 		dot <= (w_Q6_10(0)*w_next_Q6_10_in(0) + w_Q6_10(1)*w_next_Q6_10_in(1)) sll 1; 
 		IF (dot < 0) THEN
@@ -46,7 +47,7 @@ BEGIN
 			abs_dot_2 <= abs_dot - "00000000001000000000000000000000";
 		END IF;
 
-		IF (abs_dot_2 < EPSILON) THEN
+		IF (abs_dot_2 < EPSILON) AND (valid_w = '1') THEN
 			converged <= '1';
 		ELSE 
 			converged <= '0';

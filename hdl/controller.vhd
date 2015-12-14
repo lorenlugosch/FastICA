@@ -14,24 +14,35 @@ ENTITY controller IS
 		reset : IN STD_LOGIC;
 		converged : IN STD_LOGIC;
 		start : IN STD_LOGIC;
-		ws_select : OUT STD_LOGIC; -- 0 - external, 1 - from RAM
 		RAM_address : OUT INTEGER RANGE 0 TO T - 1;
 		valid_w : OUT STD_LOGIC;
 		valid_p1 : OUT STD_LOGIC;
 		RAM_we : OUT STD_LOGIC;
-		rotation_start : OUT STD_LOGIC
+		first_iteration : OUT STD_LOGIC;
+		rotation_start : OUT STD_LOGIC;
+		rotation_enable : OUT STD_LOGIC;
+		normalization_enable : OUT STD_LOGIC
 	);
 END ENTITY;
 
 ARCHITECTURE arch OF controller IS
-
-	CONSTANT rotation_latency : INTEGER := T + 5;--rotation_pipeline_depth;
-	CONSTANT normalization_latency : INTEGER := rotation_latency + 5;--normalization_pipeline_depth;
+	CONSTANT rotation_pipeline_depth : INTEGER := 1;
+	CONSTANT rotation_latency : INTEGER := T + rotation_pipeline_depth;
+	CONSTANT normalization_pipeline_depth : INTEGER := 3;
+	CONSTANT normalization_latency : INTEGER := rotation_latency + 5;
 
 	SIGNAL counter : INTEGER RANGE 0 TO 100;--normalization_latency;
 	SIGNAL address: INTEGER RANGE 0 TO T - 1;
 
-	TYPE state_type IS (ready, rotating_start, rotating_start_first_iteration, rotating_first_iteration, rotating, rotating_done, normalizing, normalizing_done, done);
+	TYPE state_type IS (
+		ready, 
+		rotating_start,
+		rotating, 
+		rotating_done, 
+		normalizing, 
+		normalizing_done, 
+		done
+	);
 	SIGNAL state : state_type;
 
 BEGIN
@@ -43,67 +54,60 @@ BEGIN
 	BEGIN
 		CASE state IS
 			WHEN ready => 
-				ws_select <= '0';
 				valid_w <= '0';
 				valid_p1 <= '0';
 				RAM_we <= '0';
 				rotation_start <= '0';
-
-			WHEN rotating_start_first_iteration => 
-				ws_select <= '0';
-				valid_w <= '0';
-				valid_p1 <= '0';
-				RAM_we <= '1';
-				rotation_start <= '1';
+				rotation_enable <= '0';
+				normalization_enable <= '0';
 
 			WHEN rotating_start => 
-				ws_select <= '1';
 				valid_w <= '0';
 				valid_p1 <= '0';
 				RAM_we <= '1';
 				rotation_start <= '1';
-
-			WHEN rotating_first_iteration =>
-				ws_select <= '0';
-				valid_w <= '0';
-				valid_p1 <= '0';
-				RAM_we <= '1';
-				rotation_start <= '0';
+				rotation_enable <= '1';
+				normalization_enable <= '0';
 			
 			WHEN rotating =>
-				ws_select <= '1';
 				valid_w <= '0';
 				valid_p1 <= '0';
 				RAM_we <= '0';
 				rotation_start <= '0';
+				rotation_enable <= '1';
+				normalization_enable <= '0';
 
 			WHEN rotating_done => 
-				ws_select <= '1';
 				valid_w <= '1';
 				valid_p1 <= '0';
 				RAM_we <= '0';
 				rotation_start <= '0';
+				rotation_enable <= '0';
+				normalization_enable <= '1';
 			
 			WHEN normalizing =>
-				ws_select <= '1';
 				valid_w <= '0';
 				valid_p1 <= '0';
 				RAM_we <= '0';
 				rotation_start <= '0';
+				rotation_enable <= '0';
+				normalization_enable <= '1';
 
 			WHEN normalizing_done => 
-				ws_select <= '1';
 				valid_w <= '0';
 				valid_p1 <= '1';
 				RAM_we <= '0';
 				rotation_start <= '0';
+				rotation_enable <= '0';
+				normalization_enable <= '1';
 
 			when done => 
-				ws_select <= '1';
 				valid_w <= '0';
 				valid_p1 <= '0';
 				RAM_we <= '0';
 				rotation_start <= '0';
+				rotation_enable <= '0';
+				normalization_enable <= '0';
 			  
 		END CASE;
 	END PROCESS;
@@ -115,35 +119,13 @@ BEGIN
 			counter <= 0;
 			state <= ready;
 			address <= 0;
+			first_iteration <= '1';
 		ELSIF (rising_edge(clock)) THEN
 			CASE state IS
 				WHEN ready => 
 					IF (start = '1') THEN
-						state <= rotating_start_first_iteration;
+						state <= rotating_start;
 					END IF;
-
-				WHEN rotating_start_first_iteration =>
-					state <= rotating_first_iteration;
-
-				WHEN rotating_first_iteration =>
-					IF (converged = '1') THEN
-						state <= done;
-						counter <= 0;
-						address <= 0;
-					ELSIF (counter = rotation_latency) THEN
-						counter <= counter + 1;
-						state <= rotating_done;
-						address <= address;
-					ELSIF (counter >= T-1) THEN
-						counter <= counter + 1;
-						state <= rotating_first_iteration;
-						address <= address;
-					ELSE
-						counter <= counter + 1;
-						state <= rotating_first_iteration;
-						address <= address + 1;
-					END IF;
-
 				WHEN rotating_start =>
 					state <= rotating;
 				
@@ -188,7 +170,7 @@ BEGIN
 						state <= normalizing_done;
 						address <= address;
 					ELSE
-						counter <= 0;
+						counter <= counter + 1;
 						state <= normalizing;
 						address <= address;
 					END IF;
@@ -200,8 +182,9 @@ BEGIN
 						address <= 0;
 					ELSE
 						counter <= 0;
-						state <= rotating;
+						state <= rotating_start;
 						address <= 0;
+						first_iteration <= '0';
 					END IF;
 
 				when done => 
