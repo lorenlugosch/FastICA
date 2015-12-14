@@ -152,6 +152,7 @@ PACKAGE parameters IS
 			sum_1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
 			p2 : IN Q11_21_array_N;
 			w_next_Q6_10 : OUT Q6_10_array_N;
+			w_Q6_10_out : OUT Q6_10_array_N;
 			start_token : IN STD_LOGIC;
 			end_token : IN STD_LOGIC
 		);

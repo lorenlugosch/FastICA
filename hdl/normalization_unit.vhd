@@ -16,6 +16,7 @@ ENTITY normalization_unit IS
 		sum_1 : IN SIGNED(Q11_21.data_width-1 DOWNTO 0);
 		p2 : IN Q11_21_array_N;
 		w_next_Q6_10 : OUT Q6_10_array_N;
+		w_Q6_10_out : OUT Q6_10_array_N;
 		start_token : IN STD_LOGIC;
 		end_token : IN STD_LOGIC
 	);
@@ -86,6 +87,7 @@ BEGIN
 			end_token_reg_2 <= '0';
 			end_token_reg_3 <= '0';
 			w_next_Q6_10 <= ((OTHERS => '0'),(OTHERS => '0'));
+			w_Q6_10_out <= ((OTHERS => '0'),(OTHERS => '0'));
 
 		ELSIF (RISING_EDGE(clock)) THEN
 			p2_reg <= p2;
@@ -109,6 +111,7 @@ BEGIN
 			end_token_reg_3 <= end_token_reg_2;
 			w_next_Q6_10(0) <= w_next(0)(Q6_10.data_width-1 DOWNTO 0);
 			w_next_Q6_10(1) <= w_next(1)(Q6_10.data_width-1 DOWNTO 0);
+			w_Q6_10_out <= w_Q6_10;
 			
 		END IF;
 	END PROCESS;

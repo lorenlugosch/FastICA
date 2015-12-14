@@ -29,6 +29,7 @@ ARCHITECTURE arch OF fastica IS
 	SIGNAL RAM_out : SIGNED(N*Q6_10.data_width-1 DOWNTO 0);
 	SIGNAL ws_hack : SIGNED(N*Q6_10.data_width-1 DOWNTO 0);
 	SIGNAL w_Q6_10 : Q6_10_array_N;
+	SIGNAL w_Q6_10_out : Q6_10_array_N;
 	SIGNAL w_next_Q6_10 : Q6_10_array_N;
 	SIGNAL sum_1_in : SIGNED(Q11_21.data_width-1 DOWNTO 0);
 	SIGNAL sum_1_in_safe : SIGNED(Q11_21.data_width-1 DOWNTO 0);
@@ -64,7 +65,7 @@ BEGIN
 		IF (first_iteration = '1') THEN 
 			w_Q6_10(0) <= "1111100110001010";--"1111111111011001"; -- ("random" vector)
 			w_Q6_10(1) <= "0000000000001111";--"0000000110011101"; --  
-		ELSE 
+		ELSIF (rotation_start_token = '1') THEN
 			w_Q6_10 <= w_next_Q6_10;
 		END IF;
 	END PROCESS;
@@ -91,6 +92,7 @@ BEGIN
 		sum_1 => sum_1_out,
 		p2 => p2_out,
 		w_next_Q6_10 => w_next_Q6_10,
+		w_Q6_10_out => w_Q6_10_out,
 		start_token => normalization_start_token,
 		end_token => normalization_end_token
 	);
@@ -99,7 +101,7 @@ BEGIN
 	PORT MAP(
 		clock => clock,
 		reset => reset,
-		w_Q6_10 => w_Q6_10,
+		w_Q6_10 => w_Q6_10_out,
 		valid_w => valid_w,
 		w_next_Q6_10_in => w_next_Q6_10,
 		converged => converged
